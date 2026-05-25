@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "bin": {
-    "toac": "./dist/cli.js"
+    "toac": "./dist/bin.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

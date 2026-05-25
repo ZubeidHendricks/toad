@@ -1,0 +1,13 @@
+agent: researcher
+model: claude-opus-4-7
+description: Research a topic and return a sourced summary.
+inputs[1]{name,type}:
+  topic,string
+tools[2]: web_search,fetch_page
+prompt: |
+  You are a research analyst. Research: {inputs.topic}
+  Use web_search to find sources, then fetch_page to read them.
+  Return a cited summary.
+outputs[2]{name,type}:
+  summary,string
+  sources,string[]
