@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { notImplemented, RUNTIME_VERSION } from "./index.js";
+import * as runtime from "./index.js";
 
-describe("@toa/runtime scaffold", () => {
-  it("exposes a version", () => {
-    expect(RUNTIME_VERSION).toBe("0.0.0");
-  });
-
-  it("notImplemented throws naming the feature", () => {
-    expect(() => notImplemented("createAgent")).toThrowError(/createAgent/);
+describe("@toa/runtime exports", () => {
+  it("exposes the public API", () => {
+    expect(runtime.RUNTIME_VERSION).toBe("0.1.0");
+    expect(typeof runtime.createAgent).toBe("function");
+    expect(typeof runtime.defineTool).toBe("function");
+    expect(typeof runtime.anthropicClient).toBe("function");
   });
 });

@@ -1,13 +1,18 @@
 /**
- * `@toa/runtime` — runtime for agents compiled by `toac`.
- *
- * Scaffold for story E0. The real API (`defineTool`, `createAgent`, the agent
- * tool loop, structured output) lands in epic E3 — see `_bmad-output/epics.md`.
+ * `@toa/runtime` — the runtime that agents compiled by `toac` import. Provides
+ * `defineTool`, `createAgent`, the tool loop, and typed errors.
+ * See `_bmad-output/architecture.md` §6.
  */
 
-export const RUNTIME_VERSION = "0.0.0";
+export const RUNTIME_VERSION = "0.1.0";
 
-/** Placeholder for runtime features not yet built (epic E3). */
-export function notImplemented(feature: string): never {
-  throw new Error(`@toa/runtime: ${feature} is not implemented yet (epic E3)`);
-}
+export { defineTool, type ToolDef } from "./tool.js";
+export { createAgent, type Agent, type AgentConfig } from "./agent.js";
+export { MaxTurnsError, OutputParseError, ToolError } from "./errors.js";
+export {
+  anthropicClient,
+  type LlmBlock,
+  type LlmClient,
+  type LlmRequest,
+  type LlmResponse,
+} from "./client.js";
