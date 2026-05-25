@@ -1,0 +1,286 @@
+import type { JsonObject, JsonValue } from "@toon-format/toon";
+import type { AgentAst, FieldDecl, ToaType } from "./ast.js";
+import { errorDiagnostic, type Diagnostic } from "./diagnostics.js";
+import { parsePromptTemplate } from "./interpolate.js";
+
+export interface ValidateResult {
+  ast?: AgentAst;
+  diagnostics: Diagnostic[];
+}
+
+const ALLOWED_KEYS = new Set([
+  "agent",
+  "model",
+  "description",
+  "inputs",
+  "tools",
+  "prompt",
+  "outputs",
+]);
+const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+type Locator = (key: string) => { line?: number };
+
+/**
+ * Validate a decoded `.agent` object and lift it into a typed `AgentAst`. All
+ * user errors are collected as diagnostics; the AST is returned only when there
+ * are none. See `_bmad-output/architecture.md` §3.③–④.
+ */
+export function validate(
+  value: JsonValue,
+  file: string,
+  keyLines: Map<string, number>,
+): ValidateResult {
+  const diagnostics: Diagnostic[] = [];
+  const at: Locator = (key) => ({ line: keyLines.get(key) });
+
+  if (!isObject(value)) {
+    diagnostics.push(
+      errorDiagnostic("TOA201", "an .agent file must be a TOON object", file),
+    );
+    return { diagnostics };
+  }
+
+  for (const key of Object.keys(value)) {
+    if (!ALLOWED_KEYS.has(key)) {
+      diagnostics.push(
+        errorDiagnostic("TOA202", `unknown key "${key}"`, file, at(key)),
+      );
+    }
+  }
+
+  const name = requireString(value, "agent", file, diagnostics, at);
+  if (name !== undefined && !IDENT.test(name)) {
+    diagnostics.push(
+      errorDiagnostic(
+        "TOA205",
+        `"agent" must be an identifier, got "${name}"`,
+        file,
+        at("agent"),
+      ),
+    );
+  }
+  const model = requireString(value, "model", file, diagnostics, at);
+  const promptText = requireString(value, "prompt", file, diagnostics, at);
+
+  let description: string | undefined;
+  if (value.description !== undefined) {
+    if (typeof value.description === "string") {
+      description = value.description;
+    } else {
+      diagnostics.push(
+        errorDiagnostic(
+          "TOA204",
+          `"description" must be a string`,
+          file,
+          at("description"),
+        ),
+      );
+    }
+  }
+
+  const inputs = parseFields(value, "inputs", file, diagnostics, at);
+  const outputs = parseFields(value, "outputs", file, diagnostics, at);
+  const tools = parseTools(value, file, diagnostics, at);
+  const prompt =
+    typeof promptText === "string"
+      ? parsePrompt(promptText, inputs, file, diagnostics, at)
+      : [];
+
+  if (diagnostics.some((d) => d.severity === "error")) {
+    return { diagnostics };
+  }
+
+  const ast: AgentAst = {
+    name: name!,
+    model: model!,
+    inputs,
+    outputs,
+    tools,
+    prompt,
+  };
+  if (description !== undefined) {
+    ast.description = description;
+  }
+  return { ast, diagnostics };
+}
+
+function requireString(
+  obj: JsonObject,
+  key: string,
+  file: string,
+  diagnostics: Diagnostic[],
+  at: Locator,
+): string | undefined {
+  const v = obj[key];
+  if (v === undefined) {
+    diagnostics.push(
+      errorDiagnostic("TOA203", `missing required key "${key}"`, file),
+    );
+    return undefined;
+  }
+  if (typeof v !== "string") {
+    diagnostics.push(
+      errorDiagnostic("TOA204", `"${key}" must be a string`, file, at(key)),
+    );
+    return undefined;
+  }
+  return v;
+}
+
+function parseFields(
+  obj: JsonObject,
+  key: "inputs" | "outputs",
+  file: string,
+  diagnostics: Diagnostic[],
+  at: Locator,
+): FieldDecl[] {
+  const arr = obj[key];
+  if (arr === undefined) {
+    return [];
+  }
+  if (!Array.isArray(arr)) {
+    diagnostics.push(
+      errorDiagnostic(
+        "TOA210",
+        `"${key}" must be a tabular array of {name,type}`,
+        file,
+        at(key),
+      ),
+    );
+    return [];
+  }
+  const fields: FieldDecl[] = [];
+  for (const item of arr) {
+    if (
+      !isObject(item) ||
+      typeof item.name !== "string" ||
+      typeof item.type !== "string"
+    ) {
+      diagnostics.push(
+        errorDiagnostic(
+          "TOA210",
+          `each "${key}" row needs a string name and type`,
+          file,
+          at(key),
+        ),
+      );
+      continue;
+    }
+    if (!IDENT.test(item.name)) {
+      diagnostics.push(
+        errorDiagnostic(
+          "TOA211",
+          `"${key}" name "${item.name}" must be an identifier`,
+          file,
+          at(key),
+        ),
+      );
+      continue;
+    }
+    const type = parseType(item.type);
+    if (type === undefined) {
+      diagnostics.push(
+        errorDiagnostic(
+          "TOA212",
+          `"${key}" has unsupported type "${item.type}" (use string | number | boolean, optional "[]")`,
+          file,
+          at(key),
+        ),
+      );
+      continue;
+    }
+    fields.push({ name: item.name, type });
+  }
+  return fields;
+}
+
+function parseTools(
+  obj: JsonObject,
+  file: string,
+  diagnostics: Diagnostic[],
+  at: Locator,
+): string[] {
+  const arr = obj.tools;
+  if (arr === undefined) {
+    return [];
+  }
+  if (!Array.isArray(arr)) {
+    diagnostics.push(
+      errorDiagnostic(
+        "TOA220",
+        `"tools" must be an array of names`,
+        file,
+        at("tools"),
+      ),
+    );
+    return [];
+  }
+  const names: string[] = [];
+  for (const t of arr) {
+    if (typeof t !== "string" || !IDENT.test(t)) {
+      diagnostics.push(
+        errorDiagnostic(
+          "TOA221",
+          `tool name must be an identifier, got ${JSON.stringify(t)}`,
+          file,
+          at("tools"),
+        ),
+      );
+      continue;
+    }
+    names.push(t);
+  }
+  return names;
+}
+
+function parsePrompt(
+  text: string,
+  inputs: FieldDecl[],
+  file: string,
+  diagnostics: Diagnostic[],
+  at: Locator,
+): AgentAst["prompt"] {
+  const inputNames = new Set(inputs.map((f) => f.name));
+  const { segments, errors } = parsePromptTemplate(text);
+  for (const message of errors) {
+    diagnostics.push(errorDiagnostic("TOA302", message, file, at("prompt")));
+  }
+  for (const seg of segments) {
+    if (seg.kind !== "interp") {
+      continue;
+    }
+    const ok =
+      seg.path.length === 2 &&
+      seg.path[0] === "inputs" &&
+      inputNames.has(seg.path[1]!);
+    if (!ok) {
+      diagnostics.push(
+        errorDiagnostic(
+          "TOA301",
+          `unknown interpolation {${seg.path.join(".")}} (only {inputs.<name>} is supported)`,
+          file,
+          at("prompt"),
+        ),
+      );
+    }
+  }
+  return segments;
+}
+
+function parseType(raw: string): ToaType | undefined {
+  let base = raw;
+  let array = false;
+  if (base.endsWith("[]")) {
+    array = true;
+    base = base.slice(0, -2);
+  }
+  if (base === "string" || base === "number" || base === "boolean") {
+    return { base, array };
+  }
+  return undefined;
+}
+
+function isObject(v: JsonValue): v is JsonObject {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}

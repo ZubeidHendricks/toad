@@ -12,6 +12,14 @@ export type { Diagnostic } from "./diagnostics.js";
 export { errorDiagnostic, formatDiagnostic } from "./diagnostics.js";
 export { decodeToon, type DecodeToonResult } from "./toon.js";
 export { preprocess, type PreprocessResult } from "./preprocess.js";
+export { analyze, type AnalyzeResult } from "./analyze.js";
+export type {
+  AgentAst,
+  FieldDecl,
+  PromptSegment,
+  ToaType,
+  ToaTypeBase,
+} from "./ast.js";
 
 export interface CompileResult {
   /** Emitted TypeScript, present only when there are no error diagnostics. */
