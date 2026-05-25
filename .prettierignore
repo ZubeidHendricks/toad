@@ -4,3 +4,4 @@ dist/
 pnpm-lock.yaml
 _bmad-output/
 opensrc/
+examples/
