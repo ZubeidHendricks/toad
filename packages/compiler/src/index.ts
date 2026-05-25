@@ -1,9 +1,10 @@
 /**
- * `@toa/compiler` — the `toac` compiler: `.agent` (a TOON superset) → typed `.ts`.
- *
- * The pipeline (preprocess → TOON decode → validate → codegen) is built across
- * epics E1–E4 — see `_bmad-output/epics.md`.
+ * `@toa/compiler` — the `toac` compiler: `.agent` (a TOON superset) -> typed `.ts`.
+ * Pipeline: preprocess -> TOON decode -> validate -> codegen.
+ * See `_bmad-output/architecture.md`.
  */
+import { analyze } from "./analyze.js";
+import { generate } from "./codegen.js";
 import type { Diagnostic } from "./diagnostics.js";
 
 export const COMPILER_VERSION = "0.0.0";
@@ -13,6 +14,7 @@ export { errorDiagnostic, formatDiagnostic } from "./diagnostics.js";
 export { decodeToon, type DecodeToonResult } from "./toon.js";
 export { preprocess, type PreprocessResult } from "./preprocess.js";
 export { analyze, type AnalyzeResult } from "./analyze.js";
+export { generate } from "./codegen.js";
 export type {
   AgentAst,
   FieldDecl,
@@ -27,16 +29,11 @@ export interface CompileResult {
   diagnostics: Diagnostic[];
 }
 
-/** Pipeline entry point — a stub until epics E2–E4 wire the remaining stages. */
-export function compile(_source: string, file = "<input>"): CompileResult {
-  return {
-    diagnostics: [
-      {
-        severity: "error",
-        code: "TOA000",
-        message: "compiler not implemented yet (epics E2–E4)",
-        file,
-      },
-    ],
-  };
+/** Compile `.agent` source to a TypeScript module, or return diagnostics. */
+export function compile(source: string, file = "<input>"): CompileResult {
+  const { ast, diagnostics } = analyze(source, file);
+  if (ast === undefined) {
+    return { diagnostics };
+  }
+  return { code: generate(ast), diagnostics };
 }
