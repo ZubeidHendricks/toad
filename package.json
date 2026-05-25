@@ -12,10 +12,12 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "lint": "prettier --check .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "build:site": "esbuild packages/compiler/dist/index.js --bundle --format=esm --outfile=site/toad-compiler.js"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "esbuild": "0.28.0",
     "prettier": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:",

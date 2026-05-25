@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TOAD — TOAgentic Development</title>
+    <meta
+      name="description"
+      content="TOAD is a compile-first framework for building AI agents. Write an agent as a tiny declarative file; the toac compiler emits typed TypeScript that runs on Claude."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐸</text></svg>"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="nav">
+      <a class="brand" href="#top"><span class="frog">🐸</span> TOAD</a>
+      <nav>
+        <a href="#showcase">Example</a>
+        <a href="#features">Features</a>
+        <a href="#playground">Playground</a>
+        <a
+          href="https://github.com/ZubeidHendricks/toa"
+          target="_blank"
+          rel="noreferrer"
+          >GitHub</a
+        >
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <p class="eyebrow">TOAgentic Development</p>
+        <h1>Agents as data.<br /><span class="grad">Compiled to types.</span></h1>
+        <p class="lede">
+          Write an AI agent as a tiny, declarative <code>.agent</code> file in a
+          token-efficient, TOON-derived syntax. The <code>toac</code> compiler
+          turns it into readable, fully-typed TypeScript that runs on Claude —
+          minimal enough that humans <em>and</em> LLMs can author it.
+        </p>
+        <div class="cta">
+          <a class="btn primary" href="#playground">Try the playground</a>
+          <a
+            class="btn"
+            href="https://github.com/ZubeidHendricks/toa"
+            target="_blank"
+            rel="noreferrer"
+            >View on GitHub</a
+          >
+        </div>
+        <p class="sub">
+          A strict superset of
+          <a
+            href="https://github.com/toon-format/toon"
+            target="_blank"
+            rel="noreferrer"
+            >TOON</a
+          >
+          · TypeScript end-to-end · MIT
+        </p>
+      </section>
+
+      <section id="showcase" class="showcase">
+        <div class="pane">
+          <div class="pane-head">researcher.agent</div>
+          <pre><code id="src-agent"></code></pre>
+        </div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="pane">
+          <div class="pane-head">
+            researcher.ts <span class="tag">generated</span>
+          </div>
+          <pre><code id="src-ts"></code></pre>
+        </div>
+      </section>
+
+      <section id="features" class="features">
+        <h2>Why TOAD</h2>
+        <div class="grid">
+          <article class="card">
+            <h3>Token-efficient</h3>
+            <p>
+              An agent is ~28% of the tokens of the equivalent JSON-schema + SDK
+              boilerplate it replaces — cheaper to write, read, and generate.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Schema-explicit</h3>
+            <p>
+              <code>[N]</code> lengths and <code>{field}</code> headers hand a
+              model the structure up front, so it can author agents reliably.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Typed end-to-end</h3>
+            <p>
+              <code>inputs</code>, <code>outputs</code>, and <code>tools</code>
+              become real TypeScript types. Misuse is a compile error.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Logic in plain TS</h3>
+            <p>
+              Tool bodies live in a co-located <code>.tools.ts</code> — the
+              escape hatch for anything the declarative layer shouldn't do.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Built on real TOON</h3>
+            <p>
+              Structural parsing is delegated to the spec-conformant
+              <code>@toon-format/toon</code> decoder. No bespoke parser.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Compile-first</h3>
+            <p>
+              The output is readable TypeScript you can read, diff, and debug —
+              not an opaque runtime. The emitted code <em>is</em> the docs.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="playground" class="playground">
+        <h2>Playground</h2>
+        <p class="muted">
+          Edit the agent on the left — it compiles in your browser, live, with
+          the real <code>toac</code> compiler.
+        </p>
+        <div class="pg">
+          <div class="pane">
+            <div class="pane-head">input.agent</div>
+            <textarea id="pg-input" spellcheck="false" autocapitalize="off"></textarea>
+          </div>
+          <div class="arrow" aria-hidden="true">→</div>
+          <div class="pane">
+            <div class="pane-head">output.ts</div>
+            <pre><code id="pg-output"></code></pre>
+          </div>
+        </div>
+        <p id="pg-status" class="pg-status"></p>
+      </section>
+
+      <section class="quickstart">
+        <h2>Quick start</h2>
+        <pre><code>git clone https://github.com/ZubeidHendricks/toa
+cd toa &amp;&amp; pnpm install
+
+# compile an agent to typed TypeScript
+node packages/compiler/dist/bin.js build examples/researcher/researcher.agent</code></pre>
+      </section>
+    </main>
+
+    <footer>
+      <span><span class="frog">🐸</span> TOAD — TOAgentic Development</span>
+      <span class="dot">·</span>
+      <a
+        href="https://github.com/ZubeidHendricks/toa"
+        target="_blank"
+        rel="noreferrer"
+        >GitHub</a
+      >
+      <span class="dot">·</span>
+      <span>MIT</span>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

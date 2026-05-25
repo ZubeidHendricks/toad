@@ -6,3 +6,4 @@ dist/
 .env.*
 .DS_Store
 .tmp-*.mjs
+site/toad-compiler.js
