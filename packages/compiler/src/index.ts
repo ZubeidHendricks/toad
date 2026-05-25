@@ -11,6 +11,7 @@ export const COMPILER_VERSION = "0.0.0";
 export type { Diagnostic } from "./diagnostics.js";
 export { errorDiagnostic, formatDiagnostic } from "./diagnostics.js";
 export { decodeToon, type DecodeToonResult } from "./toon.js";
+export { preprocess, type PreprocessResult } from "./preprocess.js";
 
 export interface CompileResult {
   /** Emitted TypeScript, present only when there are no error diagnostics. */
