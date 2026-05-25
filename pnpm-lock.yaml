@@ -43,6 +43,10 @@ importers:
         version: 4.1.6(@types/node@22.19.18)(vite@8.0.14(@types/node@22.19.18))
 
   packages/compiler:
+    dependencies:
+      '@toon-format/toon':
+        specifier: 2.2.0
+        version: 2.2.0
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -183,6 +187,9 @@ packages:
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
+
+  '@toon-format/toon@2.2.0':
+    resolution: {integrity: sha512-FMYqrlZnMN72YIT9KVt7Kxc41gat+RgMIzDmvRRPHw0J7pqW/FeBGDY/4BIWjT71Y+EdI9fCJip90uXuGuYhjw==}
 
   '@turbo/darwin-64@2.9.12':
     resolution: {integrity: sha512-eu3eFRmE9NjgZ0wPdRJ44l+LGSeIky+tz5ZQd8zQkw/Yqi+BM7wq+8nbabeoiVUcICi/IZweMOKl/MCmkrd1+g==}
@@ -615,6 +622,8 @@ snapshots:
   '@rolldown/pluginutils@1.0.1': {}
 
   '@standard-schema/spec@1.1.0': {}
+
+  '@toon-format/toon@2.2.0': {}
 
   '@turbo/darwin-64@2.9.12':
     optional: true
