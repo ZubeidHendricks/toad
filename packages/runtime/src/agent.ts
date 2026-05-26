@@ -8,7 +8,7 @@ import {
   type LlmToolUse,
 } from "./client.js";
 import { MaxTurnsError, OutputParseError, ToolError } from "./errors.js";
-import type { AnyToolDef } from "./tool.js";
+import type { AnyToolDef, ToolDef } from "./tool.js";
 
 const RESPOND_TOOL = "respond";
 
@@ -17,6 +17,8 @@ export interface AgentConfig<I, O> {
   model: string;
   description?: string;
   tools?: Record<string, AnyToolDef>;
+  /** Schema for the agent's inputs; lets it be used as a tool via `asTool()`. */
+  inputSchema?: ZodType<I>;
   /** When set, the agent must return a value matching this schema. */
   outputSchema?: ZodType<O>;
   prompt: (inputs: I) => string;
@@ -29,6 +31,8 @@ export interface AgentConfig<I, O> {
 export interface Agent<I, O> {
   readonly name: string;
   run(inputs: I): Promise<O>;
+  /** Expose this agent as a tool that another agent can call. */
+  asTool(options?: { description?: string }): ToolDef<I>;
 }
 
 /**
@@ -63,7 +67,7 @@ export function createAgent<I, O = string>(
 
   const systemText = config.description ?? `You are ${config.name}.`;
 
-  return {
+  const agent: Agent<I, O> = {
     name: config.name,
     async run(inputs: I): Promise<O> {
       const client = config.client ?? anthropicClient();
@@ -140,7 +144,20 @@ export function createAgent<I, O = string>(
 
       throw new MaxTurnsError(maxTurns);
     },
+    asTool(options) {
+      const input =
+        config.inputSchema ?? (z.object({}) as unknown as ZodType<I>);
+      return {
+        description:
+          options?.description ??
+          config.description ??
+          `Run the ${config.name} agent.`,
+        input,
+        run: (value: I) => agent.run(value),
+      };
+    },
   };
+  return agent;
 }
 
 function toInputSchema(schema: ZodType<any>): Record<string, unknown> {

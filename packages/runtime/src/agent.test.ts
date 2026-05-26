@@ -124,4 +124,32 @@ describe("createAgent", () => {
     });
     await expect(agent.run({})).rejects.toBeInstanceOf(OutputParseError);
   });
+
+  it("agent.asTool() exposes the agent as a typed tool (composition)", async () => {
+    const inner = createAgent({
+      name: "inner",
+      model: "m",
+      description: "the inner agent",
+      inputSchema: z.object({ q: z.string() }),
+      outputSchema: z.object({ a: z.string() }),
+      prompt: (i: { q: string }) => `Q: ${i.q}`,
+      client: scriptedClient([
+        {
+          stop_reason: "tool_use",
+          content: [
+            {
+              type: "tool_use",
+              id: "r",
+              name: "respond",
+              input: { a: "from-inner" },
+            },
+          ],
+        },
+      ]),
+    });
+
+    const tool = inner.asTool();
+    expect(tool.description).toBe("the inner agent");
+    expect(await tool.run({ q: "hi" })).toEqual({ a: "from-inner" });
+  });
 });

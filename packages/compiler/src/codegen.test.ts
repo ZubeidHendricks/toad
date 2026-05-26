@@ -33,6 +33,10 @@ export interface ResearcherOutput {
   sources: string[];
 }
 
+const inputSchema = z.object({
+  topic: z.string(),
+});
+
 const outputSchema = z.object({
   summary: z.string(),
   sources: z.array(z.string()),
@@ -43,6 +47,7 @@ export const researcher: Agent<ResearcherInput, ResearcherOutput> = createAgent(
   model: "claude-opus-4-7",
   description: "Research a topic and return a sourced summary.",
   tools: { web_search, fetch_page },
+  inputSchema,
   outputSchema,
   prompt: (inputs: ResearcherInput) =>
     \`You are a research analyst. Research: \${inputs.topic}

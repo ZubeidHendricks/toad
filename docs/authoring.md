@@ -109,6 +109,30 @@ export const fetch_page = defineTool({
 });
 ```
 
+## Composition
+
+An agent can be used as a tool by another agent — call `asTool()` on it and list
+it in the parent's `tools`. The sub-agent's typed inputs become the tool's input
+schema automatically (`toac` emits an `inputSchema` for every agent with inputs):
+
+```ts
+// planner.tools.ts
+import { researcher } from "./researcher.js";
+
+export const research = researcher.asTool({
+  description: "Research a topic and return a sourced summary",
+});
+```
+
+```
+# planner.agent
+agent: planner
+model: claude-opus-4-7
+tools[1]: research
+prompt: |
+  Plan an article. Use the research tool to gather sources first.
+```
+
 ## Prompt: turn any LLM into a TOAD author
 
 Copy the block below, paste it into Claude (as a system prompt or a normal
