@@ -3,10 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>TOAD — TOAgentic Development</title>
+    <title>TOAD — Token-Oriented Agentic Development</title>
     <meta
       name="description"
-      content="TOAD is a compile-first framework for building AI agents. Write an agent as a tiny declarative file; the toac compiler emits typed TypeScript that runs on Claude."
+      content="TOAD (Token-Oriented Agentic Development) is a compile-first framework for building AI agents. Write an agent as a tiny declarative file; the toac compiler emits typed TypeScript that runs on Claude."
     />
     <link
       rel="icon"
@@ -32,13 +32,21 @@
 
     <main id="top">
       <section class="hero">
-        <p class="eyebrow">TOAgentic Development</p>
+        <p class="eyebrow">
+          <b>T</b>oken-<b>O</b>riented <b>A</b>gentic <b>D</b>evelopment
+        </p>
         <h1>Agents as data.<br /><span class="grad">Compiled to types.</span></h1>
         <p class="lede">
           Write an AI agent as a tiny, declarative <code>.agent</code> file in a
-          token-efficient, TOON-derived syntax. The <code>toac</code> compiler
-          turns it into readable, fully-typed TypeScript that runs on Claude —
-          minimal enough that humans <em>and</em> LLMs can author it.
+          token-oriented syntax derived from
+          <a
+            href="https://github.com/toon-format/toon"
+            target="_blank"
+            rel="noreferrer"
+            >TOON</a
+          >. The <code>toac</code> compiler turns it into readable, fully-typed
+          TypeScript that runs on Claude — minimal enough that humans
+          <em>and</em> LLMs can author it.
         </p>
         <div class="cta">
           <a class="btn primary" href="#playground">Try the playground</a>
@@ -124,6 +132,50 @@
         </div>
       </section>
 
+      <section id="how" class="how">
+        <h2>How it works</h2>
+        <ol class="steps">
+          <li>
+            <b>Write</b> a declarative <code>.agent</code> file in TOON-derived
+            syntax.
+          </li>
+          <li>
+            <b>Lower</b> — <code>toac</code> turns <code>prompt: |</code> blocks
+            into valid TOON, then parses with the real TOON decoder.
+          </li>
+          <li>
+            <b>Validate</b> — keys, types, tools, and <code>{inputs.x}</code>
+            references become a typed agent model.
+          </li>
+          <li>
+            <b>Emit</b> — readable, typed TypeScript that runs on
+            <code>@toa/runtime</code> over the Anthropic API.
+          </li>
+        </ol>
+      </section>
+
+      <section id="ai" class="ai">
+        <h2>Write agents with AI</h2>
+        <p class="muted">
+          TOAD's syntax is small and explicit on purpose — so an LLM can author
+          it. Copy this prompt into Claude, describe your agent, and paste the
+          result into the playground below.
+        </p>
+        <div class="prompt-box">
+          <button id="copy-prompt" class="btn">Copy prompt</button>
+          <pre><code id="ai-prompt"></code></pre>
+        </div>
+        <p class="muted">
+          Full format reference:
+          <a
+            href="https://github.com/ZubeidHendricks/toa/blob/main/docs/authoring.md"
+            target="_blank"
+            rel="noreferrer"
+            >docs/authoring.md</a
+          >.
+        </p>
+      </section>
+
       <section id="playground" class="playground">
         <h2>Playground</h2>
         <p class="muted">
@@ -155,7 +207,10 @@ node packages/compiler/dist/bin.js build examples/researcher/researcher.agent</c
     </main>
 
     <footer>
-      <span><span class="frog">🐸</span> TOAD — TOAgentic Development</span>
+      <span
+        ><span class="frog">🐸</span> TOAD — Token-Oriented Agentic
+        Development</span
+      >
       <span class="dot">·</span>
       <a
         href="https://github.com/ZubeidHendricks/toa"

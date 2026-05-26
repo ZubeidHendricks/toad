@@ -107,8 +107,12 @@ main {
   text-transform: uppercase;
   letter-spacing: 0.18em;
   font-size: 0.8rem;
-  color: var(--accent);
+  color: var(--muted);
   margin: 0 0 12px;
+}
+.eyebrow b {
+  color: var(--accent);
+  font-weight: 800;
 }
 .hero h1 {
   font-size: clamp(2.4rem, 6vw, 4.2rem);
@@ -302,6 +306,46 @@ pre code {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+}
+
+/* How it works + Write with AI */
+.how,
+.ai {
+  padding: 50px 0;
+  border-top: 1px solid var(--border);
+}
+.how h2,
+.ai h2 {
+  font-size: 1.9rem;
+  margin: 0 0 8px;
+}
+.steps {
+  margin: 18px 0 0;
+  padding-left: 22px;
+  color: var(--muted);
+  display: grid;
+  gap: 10px;
+}
+.steps b {
+  color: var(--text);
+}
+.prompt-box {
+  position: relative;
+  margin: 18px 0;
+}
+.prompt-box pre {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-height: 380px;
+}
+#copy-prompt {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
 }
 
 /* Footer */

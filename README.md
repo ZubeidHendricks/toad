@@ -1,17 +1,25 @@
 # TOAD
 
-**TOAgentic Development** — a compile-first framework for building AI agents.
+**TOAD — Token-Oriented Agentic Development.** A compile-first framework for
+building AI agents.
 
-You describe an agent as a small, declarative `.agent` file in a token-efficient,
-TOON-derived syntax. The `toac` compiler turns it into readable, fully-typed
-TypeScript that runs on `@toa/runtime` over the Anthropic API. The surface is
-deliberately minimal, so an agent is cheap to write and review — for humans _and_
-for the LLMs that increasingly author and edit agents.
+You describe an agent in a small, token-efficient `.agent` file, and the `toac`
+compiler turns it into readable, fully-typed TypeScript that runs on Claude. The
+syntax is derived from [TOON](https://github.com/toon-format/toon)
+(Token-Oriented Object Notation), so an agent reads like compact data rather than
+boilerplate — cheap to write and review for humans _and_ for the LLMs that
+increasingly author agents.
 
-TOAD is a **strict superset of [TOON](https://github.com/toon-format/toon)**
-(Token-Oriented Object Notation). Structural parsing is delegated to TOON's own
-spec-conformant decoder; TOAD layers on `prompt: |` block scalars and `{ }`
-interpolation — so an agent reads like data, not boilerplate.
+The name spells out the idea:
+
+- **T**oken-**O**riented — agents are written in TOON-derived syntax that uses
+  far fewer tokens than JSON and hands a model an explicit schema to follow.
+- **A**gentic **D**evelopment — defining, compiling, type-checking, and running
+  agents is the whole workflow.
+
+TOAD is a **strict superset of TOON**: structural parsing is delegated to TOON's
+spec-conformant decoder, and TOAD adds `prompt: |` block scalars and
+`{inputs.x}` interpolation on top.
 
 ## What an agent looks like
 
@@ -67,6 +75,11 @@ node packages/compiler/dist/bin.js build examples/researcher/researcher.agent
 
 See [`examples/researcher`](./examples/researcher) for a complete, type-checked
 example.
+
+## Authoring agents
+
+New to TOAD? [`docs/authoring.md`](./docs/authoring.md) explains the `.agent`
+format and includes a copy-paste prompt that turns any LLM into a TOAD author.
 
 ## Status
 
