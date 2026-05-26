@@ -18,7 +18,14 @@ export interface FieldDecl {
 export type PromptSegment =
   | { kind: "text"; value: string }
   | { kind: "interp"; path: string[] }
-  | { kind: "each"; source: string[]; item: string; body: PromptSegment[] }
+  | {
+      kind: "each";
+      source: string[];
+      item: string;
+      index?: string;
+      body: PromptSegment[];
+      else?: PromptSegment[];
+    }
   | {
       kind: "if";
       cond: string[];

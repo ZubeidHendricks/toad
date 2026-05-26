@@ -334,7 +334,23 @@ function validatePromptSegments(
       }
       const inner = new Set(vars);
       inner.add(seg.item);
+      if (seg.index !== undefined) {
+        if (vars.has(seg.index)) {
+          ctx.diagnostics.push(
+            errorDiagnostic(
+              "TOA304",
+              `loop index "${seg.index}" shadows an outer variable`,
+              ctx.file,
+              ctx.at("prompt"),
+            ),
+          );
+        }
+        inner.add(seg.index);
+      }
       validatePromptSegments(seg.body, inner, ctx);
+      if (seg.else !== undefined) {
+        validatePromptSegments(seg.else, vars, ctx);
+      }
     } else if (seg.kind === "if") {
       const okCond =
         seg.cond.length === 2 &&

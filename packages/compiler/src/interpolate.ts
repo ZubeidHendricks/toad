@@ -5,32 +5,46 @@ export interface ParseTemplateResult {
   errors: string[];
 }
 
+type EachSeg = Extract<PromptSegment, { kind: "each" }>;
+type IfSeg = Extract<PromptSegment, { kind: "if" }>;
+
 const PATH = /^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$/;
 const EACH =
-  /^#each\s+([A-Za-z_][A-Za-z0-9_.]*)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/;
+  /^#each\s+([A-Za-z_][A-Za-z0-9_.]*)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s*,\s*([A-Za-z_][A-Za-z0-9_]*))?$/;
 const IF = /^#if\s+(!?)\s*([A-Za-z_][A-Za-z0-9_.]*)$/;
+const ELSE_IF = /^:else if\s+(!?)\s*([A-Za-z_][A-Za-z0-9_.]*)$/;
+
+interface Branch {
+  cond: string[];
+  negate: boolean;
+  body: PromptSegment[];
+}
 
 interface Frame {
   kind: "root" | "each" | "if";
-  /** The collection currently being appended to (then- or else-branch for if). */
+  /** The collection currently being appended to. */
   segs: PromptSegment[];
+  // each
   source?: string[];
   item?: string;
-  cond?: string[];
-  negate?: boolean;
-  thenSegs?: PromptSegment[];
+  index?: string;
+  body?: PromptSegment[];
+  // each + if (the {:else} branch)
   elseSegs?: PromptSegment[];
+  // if (the {#if}/{:else if} branches)
+  branches?: Branch[];
 }
 
 /**
  * Parse a prompt string into segments. Supports:
- *   - `{ a.b }`                         interpolation over a dotted path
- *   - `{#each xs as x}…{/each}`          iterate an array input
- *   - `{#if inputs.flag}…{:else}…{/if}`  conditional (boolean input; `!` negates)
- *   - `{{` / `}}`                       literal braces
+ *   - `{ a.b }` / `{ env.X }`                 interpolation
+ *   - `{#each xs as x, i}…{:else}…{/each}`     loop (index + empty fallback)
+ *   - `{#if a}…{:else if b}…{:else}…{/if}`     conditional chain
+ *   - `{{` / `}}`                             literal braces
  *
- * Block directives are control lines: the newline immediately after each is
- * consumed. Path/scope/type validation happens in `validate`.
+ * `{:else if}` desugars to a nested `{#if}` in the else branch, so the `if`
+ * segment stays a simple then/else. Block directives are control lines (the
+ * newline immediately after each is consumed). Validation happens in `validate`.
  */
 export function parsePromptTemplate(text: string): ParseTemplateResult {
   const errors: string[] = [];
@@ -77,18 +91,25 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
         const m = EACH.exec(inner);
         if (!m) {
           errors.push(
-            `invalid {#each}: {${inner}} (use {#each inputs.xs as x})`,
+            `invalid {#each}: {${inner}} (use {#each inputs.xs as x} or {#each inputs.xs as x, i})`,
           );
           i = end + 1;
           continue;
         }
         flush();
-        stack.push({
+        const body: PromptSegment[] = [];
+        const frame: Frame = {
           kind: "each",
-          segs: [],
+          segs: body,
           source: m[1]!.split("."),
           item: m[2]!,
-        });
+          body,
+          elseSegs: [],
+        };
+        if (m[3] !== undefined) {
+          frame.index = m[3];
+        }
+        stack.push(frame);
         i = eatNewline(end + 1);
         continue;
       }
@@ -103,16 +124,42 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
           continue;
         }
         flush();
-        const thenSegs: PromptSegment[] = [];
-        const elseSegs: PromptSegment[] = [];
-        stack.push({
-          kind: "if",
-          segs: thenSegs,
+        const first: Branch = {
           cond: m[2]!.split("."),
           negate: m[1] === "!",
-          thenSegs,
-          elseSegs,
+          body: [],
+        };
+        stack.push({
+          kind: "if",
+          segs: first.body,
+          branches: [first],
+          elseSegs: [],
         });
+        i = eatNewline(end + 1);
+        continue;
+      }
+
+      if (inner.startsWith(":else if")) {
+        const m = ELSE_IF.exec(inner);
+        const frame = top();
+        if (!m) {
+          errors.push(`invalid {:else if}: {${inner}}`);
+          i = end + 1;
+          continue;
+        }
+        if (frame.kind !== "if") {
+          errors.push("unexpected {:else if}");
+          i = end + 1;
+          continue;
+        }
+        flush();
+        const branch: Branch = {
+          cond: m[2]!.split("."),
+          negate: m[1] === "!",
+          body: [],
+        };
+        frame.branches!.push(branch);
+        frame.segs = branch.body;
         i = eatNewline(end + 1);
         continue;
       }
@@ -120,32 +167,12 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
       if (inner === ":else") {
         flush();
         const frame = top();
-        if (frame.kind !== "if") {
+        if (frame.kind !== "if" && frame.kind !== "each") {
           errors.push("unexpected {:else}");
           i = end + 1;
           continue;
         }
         frame.segs = frame.elseSegs!;
-        i = eatNewline(end + 1);
-        continue;
-      }
-
-      if (inner === "/if") {
-        flush();
-        const frame = top();
-        if (frame.kind !== "if") {
-          errors.push("unexpected {/if}");
-          i = end + 1;
-          continue;
-        }
-        stack.pop();
-        top().segs.push({
-          kind: "if",
-          cond: frame.cond!,
-          negate: frame.negate!,
-          then: frame.thenSegs!,
-          else: frame.elseSegs!,
-        });
         i = eatNewline(end + 1);
         continue;
       }
@@ -159,12 +186,47 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
           continue;
         }
         stack.pop();
-        top().segs.push({
+        const seg: EachSeg = {
           kind: "each",
           source: frame.source!,
           item: frame.item!,
-          body: frame.segs,
-        });
+          body: frame.body!,
+        };
+        if (frame.index !== undefined) {
+          seg.index = frame.index;
+        }
+        if (frame.elseSegs!.length > 0) {
+          seg.else = frame.elseSegs;
+        }
+        top().segs.push(seg);
+        i = eatNewline(end + 1);
+        continue;
+      }
+
+      if (inner === "/if") {
+        flush();
+        const frame = top();
+        if (frame.kind !== "if") {
+          errors.push("unexpected {/if}");
+          i = end + 1;
+          continue;
+        }
+        stack.pop();
+        // Fold the branch chain into nested if/else segments.
+        let elseChain: PromptSegment[] = frame.elseSegs!;
+        const branches = frame.branches!;
+        for (let k = branches.length - 1; k >= 0; k--) {
+          const branch = branches[k]!;
+          const ifSeg: IfSeg = {
+            kind: "if",
+            cond: branch.cond,
+            negate: branch.negate,
+            then: branch.body,
+            else: elseChain,
+          };
+          elseChain = [ifSeg];
+        }
+        top().segs.push(elseChain[0]!);
         i = eatNewline(end + 1);
         continue;
       }

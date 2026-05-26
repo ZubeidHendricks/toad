@@ -102,7 +102,13 @@ function segmentsToBody(segments: PromptSegment[]): string {
           ? `\${process.env.${seg.path.slice(1).join(".")} ?? ""}`
           : `\${${seg.path.join(".")}}`;
     } else if (seg.kind === "each") {
-      out += `\${${seg.source.join(".")}.map((${seg.item}) => \`${segmentsToBody(seg.body)}\`).join("")}`;
+      const params =
+        seg.index !== undefined ? `${seg.item}, ${seg.index}` : seg.item;
+      const loop = `${seg.source.join(".")}.map((${params}) => \`${segmentsToBody(seg.body)}\`).join("")`;
+      out +=
+        seg.else !== undefined && seg.else.length > 0
+          ? `\${${seg.source.join(".")}.length > 0 ? ${loop} : \`${segmentsToBody(seg.else)}\`}`
+          : `\${${loop}}`;
     } else {
       const cond = `${seg.negate ? "!" : ""}${seg.cond.join(".")}`;
       out += `\${${cond} ? \`${segmentsToBody(seg.then)}\` : \`${segmentsToBody(seg.else)}\`}`;
