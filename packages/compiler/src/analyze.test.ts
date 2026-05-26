@@ -30,6 +30,7 @@ describe("analyze — full front-end (.agent -> AgentAst)", () => {
         { name: "sources", type: { base: "string", array: true } },
       ],
       tools: ["web_search", "fetch_page"],
+      uses: [],
       prompt: [
         { kind: "text", value: "You are a research analyst. Research: " },
         { kind: "interp", path: ["inputs", "topic"] },

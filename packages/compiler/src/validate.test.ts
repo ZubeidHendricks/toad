@@ -32,6 +32,7 @@ describe("validate", () => {
         { name: "sources", type: { base: "string", array: true } },
       ],
       tools: ["web_search", "fetch_page"],
+      uses: [],
       prompt: [
         { kind: "text", value: "Research: " },
         { kind: "interp", path: ["inputs", "topic"] },

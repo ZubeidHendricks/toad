@@ -26,6 +26,9 @@ export function generate(ast: AgentAst): string {
       `import { ${ast.tools.join(", ")} } from "./${ast.name}.tools";`,
     );
   }
+  for (const sub of ast.uses) {
+    lines.push(`import { ${sub} } from "./${sub}";`);
+  }
   lines.push("");
 
   emitInterface(lines, inputType, ast.inputs);
@@ -58,8 +61,12 @@ export function generate(ast: AgentAst): string {
   if (ast.retries !== undefined) {
     lines.push(`  retries: ${ast.retries},`);
   }
-  if (hasTools) {
-    lines.push(`  tools: { ${ast.tools.join(", ")} },`);
+  const toolEntries = [
+    ...ast.tools,
+    ...ast.uses.map((sub) => `${sub}: ${sub}.asTool()`),
+  ];
+  if (toolEntries.length > 0) {
+    lines.push(`  tools: { ${toolEntries.join(", ")} },`);
   }
   if (hasInputs) {
     lines.push(`  inputSchema,`);

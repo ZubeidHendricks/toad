@@ -18,6 +18,7 @@ const ALLOWED_KEYS = new Set([
   "outputs",
   "maxTurns",
   "retries",
+  "uses",
 ]);
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -84,6 +85,7 @@ export function validate(
   const inputs = parseFields(value, "inputs", file, diagnostics, at);
   const outputs = parseFields(value, "outputs", file, diagnostics, at);
   const tools = parseTools(value, file, diagnostics, at);
+  const uses = parseUses(value, file, diagnostics, at);
   const maxTurns = parseIntKey(value, "maxTurns", file, diagnostics, at);
   const retries = parseIntKey(value, "retries", file, diagnostics, at);
   const prompt =
@@ -101,6 +103,7 @@ export function validate(
     inputs,
     outputs,
     tools,
+    uses,
     prompt,
   };
   if (description !== undefined) {
@@ -113,6 +116,45 @@ export function validate(
     ast.retries = retries;
   }
   return { ast, diagnostics };
+}
+
+function parseUses(
+  obj: JsonObject,
+  file: string,
+  diagnostics: Diagnostic[],
+  at: Locator,
+): string[] {
+  const arr = obj.uses;
+  if (arr === undefined) {
+    return [];
+  }
+  if (!Array.isArray(arr)) {
+    diagnostics.push(
+      errorDiagnostic(
+        "TOA230",
+        `"uses" must be an array of agent names`,
+        file,
+        at("uses"),
+      ),
+    );
+    return [];
+  }
+  const names: string[] = [];
+  for (const u of arr) {
+    if (typeof u !== "string" || !IDENT.test(u)) {
+      diagnostics.push(
+        errorDiagnostic(
+          "TOA231",
+          `"uses" entries must be identifiers, got ${JSON.stringify(u)}`,
+          file,
+          at("uses"),
+        ),
+      );
+      continue;
+    }
+    names.push(u);
+  }
+  return names;
 }
 
 function parseIntKey(

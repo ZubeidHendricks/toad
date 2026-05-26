@@ -133,6 +133,18 @@ prompt: |
   Plan an article. Use the research tool to gather sources first.
 ```
 
+Or skip the `.tools.ts` wiring — declare sub-agents with `uses`, and `toac`
+imports them and calls `asTool()` for you (the tool's name is the agent's name):
+
+```
+# planner.agent
+agent: planner
+model: claude-opus-4-7
+uses[1]: researcher
+prompt: |
+  Plan an article. Use the researcher tool to gather sources first.
+```
+
 ## Prompt: turn any LLM into a TOAD author
 
 Copy the block below, paste it into Claude (as a system prompt or a normal

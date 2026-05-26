@@ -43,6 +43,8 @@ export interface AgentAst {
   outputs: FieldDecl[];
   /** Tool names; resolved against the co-located `<name>.tools.ts`. */
   tools: string[];
+  /** Sub-agent names used as tools (wired via `asTool()`). */
+  uses: string[];
   prompt: PromptSegment[];
   /** Max tool-use turns before giving up. */
   maxTurns?: number;
