@@ -176,6 +176,8 @@ THE .agent FORMAT (indentation is 2 spaces, never tabs):
   prompt: |                required. the instruction prompt as an indented block:
     line one of the prompt...
   outputs[N]{name,type}:   optional. N typed result fields, one per indented row
+  system: |                optional. a system prompt (else uses the description)
+  uses[N]: <a>,<b>         optional. sub-agents used as tools
 
 TYPES: string | number | boolean, or a quoted object type "{a:string;b:number}".
 Append [] for an array (string[], "{...}[]"). Read object fields with x.field.

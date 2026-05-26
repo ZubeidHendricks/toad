@@ -16,6 +16,7 @@ const ALLOWED_KEYS = new Set([
   "tools",
   "prompt",
   "outputs",
+  "system",
   "maxTurns",
   "retries",
   "uses",
@@ -92,6 +93,21 @@ export function validate(
     typeof promptText === "string"
       ? parsePrompt(promptText, inputs, file, diagnostics, at)
       : [];
+  let system: PromptSegment[] | undefined;
+  if (value.system !== undefined) {
+    if (typeof value.system === "string") {
+      system = parsePrompt(value.system, inputs, file, diagnostics, at);
+    } else {
+      diagnostics.push(
+        errorDiagnostic(
+          "TOA204",
+          `"system" must be a string`,
+          file,
+          at("system"),
+        ),
+      );
+    }
+  }
 
   if (diagnostics.some((d) => d.severity === "error")) {
     return { diagnostics };
@@ -108,6 +124,9 @@ export function validate(
   };
   if (description !== undefined) {
     ast.description = description;
+  }
+  if (system !== undefined) {
+    ast.system = system;
   }
   if (maxTurns !== undefined) {
     ast.maxTurns = maxTurns;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { createAgent } from "./agent.js";
-import type { LlmClient, LlmResponse } from "./client.js";
+import type { LlmClient, LlmRequest, LlmResponse } from "./client.js";
 import { MaxTurnsError, OutputParseError } from "./errors.js";
 import { defineTool } from "./tool.js";
 
@@ -228,5 +228,27 @@ describe("createAgent", () => {
       out += chunk;
     }
     expect(out).toBe("Hello, world");
+  });
+
+  it("uses the configured system prompt in the request", async () => {
+    let captured: LlmRequest | undefined;
+    const client: LlmClient = {
+      create: async (req) => {
+        captured = req;
+        return {
+          stop_reason: "end_turn",
+          content: [{ type: "text", text: "ok" }],
+        };
+      },
+    };
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      system: () => "SYSTEM-PROMPT",
+      prompt: () => "hi",
+      client,
+    });
+    await agent.run({});
+    expect(JSON.stringify(captured?.system)).toContain("SYSTEM-PROMPT");
   });
 });

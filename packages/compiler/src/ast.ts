@@ -53,6 +53,8 @@ export interface AgentAst {
   /** Sub-agent names used as tools (wired via `asTool()`). */
   uses: string[];
   prompt: PromptSegment[];
+  /** Optional system prompt; defaults to the description at runtime. */
+  system?: PromptSegment[];
   /** Max tool-use turns before giving up. */
   maxTurns?: number;
   /** Retries for the model call on error. */

@@ -30,6 +30,8 @@ export interface AgentConfig<I, O> {
   /** When set, the agent must return a value matching this schema. */
   outputSchema?: ZodType<O>;
   prompt: (inputs: I) => string;
+  /** Optional system prompt; defaults to the description. */
+  system?: (inputs: I) => string;
   maxTurns?: number;
   maxTokens?: number;
   /** Retry the model call up to this many times on error. */
@@ -79,7 +81,10 @@ export function createAgent<I, O = string>(
     tools[tools.length - 1]!.cache_control = { type: "ephemeral" };
   }
 
-  const systemText = config.description ?? `You are ${config.name}.`;
+  const systemFor = (inputs: I): string =>
+    config.system
+      ? config.system(inputs)
+      : (config.description ?? `You are ${config.name}.`);
 
   const agent: Agent<I, O> = {
     name: config.name,
@@ -112,7 +117,7 @@ export function createAgent<I, O = string>(
           system: [
             {
               type: "text",
-              text: systemText,
+              text: systemFor(inputs),
               cache_control: { type: "ephemeral" },
             },
           ],
@@ -190,7 +195,7 @@ export function createAgent<I, O = string>(
           system: [
             {
               type: "text",
-              text: systemText,
+              text: systemFor(inputs),
               cache_control: { type: "ephemeral" },
             },
           ],

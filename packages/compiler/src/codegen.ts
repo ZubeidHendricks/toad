@@ -74,6 +74,10 @@ export function generate(ast: AgentAst): string {
   if (hasOutputs) {
     lines.push(`  outputSchema,`);
   }
+  if (ast.system !== undefined) {
+    lines.push(`  system: (inputs: ${inputType}) =>`);
+    lines.push(`    ${promptExpr(ast.system)},`);
+  }
   lines.push(`  prompt: (inputs: ${inputType}) =>`);
   lines.push(`    ${promptExpr(ast.prompt)},`);
   lines.push(`});`);

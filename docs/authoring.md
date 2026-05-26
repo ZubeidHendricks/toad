@@ -34,6 +34,10 @@ is a strict superset of [TOON](https://github.com/toon-format/toon).
 | `tools` | no | `tools[N]: a,b` | tool names, implemented in `<agent>.tools.ts` |
 | `prompt` | yes | `prompt: \|` + indented block | the instruction prompt |
 | `outputs` | no | `outputs[N]{name,type}:` + N rows | typed structured result |
+| `system` | no | `system: \|` + block | system prompt (defaults to the description) |
+| `uses` | no | `uses[N]: a,b` | sub-agents wired in as tools via `asTool()` |
+| `maxTurns` | no | number | max tool-use turns |
+| `retries` | no | number | model-call retries |
 
 **Types:** `string`, `number`, `boolean`, or a quoted object type like
 `"{title:string;score:number}"`. Append `[]` for an array (`string[]`, or
@@ -170,6 +174,8 @@ THE .agent FORMAT (indentation is 2 spaces, never tabs):
   prompt: |                required. the instruction prompt as an indented block:
     line one of the prompt...
   outputs[N]{name,type}:   optional. N typed result fields, one per indented row
+  system: |                optional. a system prompt (else uses the description)
+  uses[N]: <a>,<b>         optional. sub-agents used as tools
 
 TYPES: string | number | boolean, or a quoted object type "{a:string;b:number}".
 Append [] for an array (string[], "{...}[]"). Read object fields with x.field.
