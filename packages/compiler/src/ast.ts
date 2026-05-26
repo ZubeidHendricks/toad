@@ -44,4 +44,8 @@ export interface AgentAst {
   /** Tool names; resolved against the co-located `<name>.tools.ts`. */
   tools: string[];
   prompt: PromptSegment[];
+  /** Max tool-use turns before giving up. */
+  maxTurns?: number;
+  /** Retries for the model call on error. */
+  retries?: number;
 }

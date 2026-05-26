@@ -16,6 +16,8 @@ const ALLOWED_KEYS = new Set([
   "tools",
   "prompt",
   "outputs",
+  "maxTurns",
+  "retries",
 ]);
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -82,6 +84,8 @@ export function validate(
   const inputs = parseFields(value, "inputs", file, diagnostics, at);
   const outputs = parseFields(value, "outputs", file, diagnostics, at);
   const tools = parseTools(value, file, diagnostics, at);
+  const maxTurns = parseIntKey(value, "maxTurns", file, diagnostics, at);
+  const retries = parseIntKey(value, "retries", file, diagnostics, at);
   const prompt =
     typeof promptText === "string"
       ? parsePrompt(promptText, inputs, file, diagnostics, at)
@@ -102,7 +106,38 @@ export function validate(
   if (description !== undefined) {
     ast.description = description;
   }
+  if (maxTurns !== undefined) {
+    ast.maxTurns = maxTurns;
+  }
+  if (retries !== undefined) {
+    ast.retries = retries;
+  }
   return { ast, diagnostics };
+}
+
+function parseIntKey(
+  obj: JsonObject,
+  key: string,
+  file: string,
+  diagnostics: Diagnostic[],
+  at: Locator,
+): number | undefined {
+  const v = obj[key];
+  if (v === undefined) {
+    return undefined;
+  }
+  if (typeof v !== "number" || !Number.isInteger(v) || v < 0) {
+    diagnostics.push(
+      errorDiagnostic(
+        "TOA206",
+        `"${key}" must be a non-negative integer`,
+        file,
+        at(key),
+      ),
+    );
+    return undefined;
+  }
+  return v;
 }
 
 function requireString(

@@ -3,6 +3,8 @@ import {
   anthropicClient,
   type LlmClient,
   type LlmMessage,
+  type LlmRequest,
+  type LlmResponse,
   type LlmText,
   type LlmTool,
   type LlmToolUse,
@@ -11,6 +13,12 @@ import { MaxTurnsError, OutputParseError, ToolError } from "./errors.js";
 import type { AnyToolDef, ToolDef } from "./tool.js";
 
 const RESPOND_TOOL = "respond";
+
+export interface AgentHooks {
+  onToolCall?: (name: string, input: unknown) => void;
+  onToolResult?: (name: string, output: unknown) => void;
+  onError?: (error: unknown) => void;
+}
 
 export interface AgentConfig<I, O> {
   name: string;
@@ -24,6 +32,10 @@ export interface AgentConfig<I, O> {
   prompt: (inputs: I) => string;
   maxTurns?: number;
   maxTokens?: number;
+  /** Retry the model call up to this many times on error. */
+  retries?: number;
+  /** Observability / guardrail hooks. */
+  hooks?: AgentHooks;
   /** Injectable for testing; defaults to the real Anthropic client. */
   client?: LlmClient;
 }
@@ -71,6 +83,20 @@ export function createAgent<I, O = string>(
     name: config.name,
     async run(inputs: I): Promise<O> {
       const client = config.client ?? anthropicClient();
+      const hooks = config.hooks;
+      const attempts = (config.retries ?? 0) + 1;
+      const callModel = async (req: LlmRequest): Promise<LlmResponse> => {
+        let lastError: unknown;
+        for (let attempt = 0; attempt < attempts; attempt++) {
+          try {
+            return await client.create(req);
+          } catch (error) {
+            lastError = error;
+            hooks?.onError?.(error);
+          }
+        }
+        throw lastError;
+      };
       let userText = config.prompt(inputs);
       if (config.outputSchema) {
         userText += `\n\nWhen finished, call the \`${RESPOND_TOOL}\` tool with the final result.`;
@@ -78,7 +104,7 @@ export function createAgent<I, O = string>(
       const messages: LlmMessage[] = [{ role: "user", content: userText }];
 
       for (let turn = 0; turn < maxTurns; turn++) {
-        const res = await client.create({
+        const res = await callModel({
           model: config.model,
           max_tokens: maxTokens,
           system: [
@@ -130,12 +156,15 @@ export function createAgent<I, O = string>(
             );
             continue;
           }
+          hooks?.onToolCall?.(tu.name, input.data);
           let output: unknown;
           try {
             output = await def.run(input.data);
           } catch (err) {
+            hooks?.onError?.(err);
             throw new ToolError(tu.name, err);
           }
+          hooks?.onToolResult?.(tu.name, output);
           results.push(toolResult(tu.id, stringify(output)));
         }
 

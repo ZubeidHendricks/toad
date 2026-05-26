@@ -7,7 +7,12 @@
 export const RUNTIME_VERSION = "0.1.0";
 
 export { defineTool, type ToolDef } from "./tool.js";
-export { createAgent, type Agent, type AgentConfig } from "./agent.js";
+export {
+  createAgent,
+  type Agent,
+  type AgentConfig,
+  type AgentHooks,
+} from "./agent.js";
 export { MaxTurnsError, OutputParseError, ToolError } from "./errors.js";
 export {
   anthropicClient,

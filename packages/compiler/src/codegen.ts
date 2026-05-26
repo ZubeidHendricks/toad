@@ -52,6 +52,12 @@ export function generate(ast: AgentAst): string {
   if (ast.description !== undefined) {
     lines.push(`  description: ${JSON.stringify(ast.description)},`);
   }
+  if (ast.maxTurns !== undefined) {
+    lines.push(`  maxTurns: ${ast.maxTurns},`);
+  }
+  if (ast.retries !== undefined) {
+    lines.push(`  retries: ${ast.retries},`);
+  }
   if (hasTools) {
     lines.push(`  tools: { ${ast.tools.join(", ")} },`);
   }

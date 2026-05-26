@@ -152,4 +152,60 @@ describe("createAgent", () => {
     expect(tool.description).toBe("the inner agent");
     expect(await tool.run({ q: "hi" })).toEqual({ a: "from-inner" });
   });
+
+  it("retries the model call on error", async () => {
+    let calls = 0;
+    const client: LlmClient = {
+      create: async () => {
+        calls += 1;
+        if (calls === 1) {
+          throw new Error("transient");
+        }
+        return {
+          stop_reason: "end_turn",
+          content: [{ type: "text", text: "ok" }],
+        };
+      },
+    };
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      prompt: () => "go",
+      retries: 1,
+      client,
+    });
+    expect(await agent.run({})).toBe("ok");
+    expect(calls).toBe(2);
+  });
+
+  it("calls lifecycle hooks around tool use", async () => {
+    const events: string[] = [];
+    const search = defineTool({
+      description: "search",
+      input: z.object({ q: z.string() }),
+      run: () => "R",
+    });
+    const client = scriptedClient([
+      {
+        stop_reason: "tool_use",
+        content: [
+          { type: "tool_use", id: "t", name: "search", input: { q: "x" } },
+        ],
+      },
+      { stop_reason: "end_turn", content: [{ type: "text", text: "done" }] },
+    ]);
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      tools: { search },
+      prompt: () => "go",
+      client,
+      hooks: {
+        onToolCall: (name) => events.push(`call:${name}`),
+        onToolResult: (name) => events.push(`result:${name}`),
+      },
+    });
+    expect(await agent.run({})).toBe("done");
+    expect(events).toEqual(["call:search", "result:search"]);
+  });
 });
