@@ -37,8 +37,9 @@ is a strict superset of [TOON](https://github.com/toon-format/toon).
 
 **Types:** `string`, `number`, `boolean`. Append `[]` for an array (`string[]`).
 
-**Interpolation:** inside `prompt`, `{inputs.<name>}` inserts a declared input.
-`{{` and `}}` are literal braces. No other expressions.
+**Interpolation:** inside `prompt`, `{inputs.<name>}` inserts a declared input and
+`{env.<NAME>}` inserts an environment variable (`process.env.<NAME>`, empty string
+if unset). `{{` and `}}` are literal braces.
 
 **Counts must match:** `inputs[2]{...}` has exactly two indented rows;
 `tools[2]: a,b` lists exactly two names.
@@ -134,6 +135,7 @@ TYPES: string | number | boolean. Append [] for an array, e.g. string[].
 
 INTERPOLATION: in the prompt, {inputs.<name>} inserts a declared input's value.
 The name must be one you declared in inputs. Use {{ and }} for literal braces.
+{env.<NAME>} inserts an environment variable (process.env.<NAME>).
 
 LOOPS: iterate an array input with {#each inputs.<name> as <item>} ... {/each}.
 The body repeats once per element; reference the element with {<item>}.

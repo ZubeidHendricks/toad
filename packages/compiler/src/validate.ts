@@ -295,11 +295,13 @@ function validatePromptSegments(
         ctx.inputNames.has(seg.path[1]!)
       ) {
         // ok — a declared input
+      } else if (root === "env" && seg.path.length === 2) {
+        // ok — an environment variable, resolved at runtime
       } else {
         ctx.diagnostics.push(
           errorDiagnostic(
             "TOA301",
-            `unknown interpolation {${seg.path.join(".")}} (use {inputs.<name>} or a loop variable)`,
+            `unknown interpolation {${seg.path.join(".")}} (use {inputs.<name>}, {env.<NAME>}, or a loop variable)`,
             ctx.file,
             ctx.at("prompt"),
           ),

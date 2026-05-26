@@ -159,6 +159,7 @@ TYPES: string | number | boolean. Append [] for an array, e.g. string[].
 
 INTERPOLATION: in the prompt, {inputs.<name>} inserts a declared input's value.
 The name must be one you declared in inputs. Use {{ and }} for literal braces.
+{env.<NAME>} inserts an environment variable (process.env.<NAME>).
 
 LOOPS: iterate an array input with {#each inputs.<name> as <item>} ... {/each}.
 The body repeats once per element; reference the element with {<item>}.

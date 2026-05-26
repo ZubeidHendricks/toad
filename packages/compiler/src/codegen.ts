@@ -97,7 +97,10 @@ function segmentsToBody(segments: PromptSegment[]): string {
     if (seg.kind === "text") {
       out += escapeTemplate(seg.value);
     } else if (seg.kind === "interp") {
-      out += `\${${seg.path.join(".")}}`;
+      out +=
+        seg.path[0] === "env"
+          ? `\${process.env.${seg.path.slice(1).join(".")} ?? ""}`
+          : `\${${seg.path.join(".")}}`;
     } else if (seg.kind === "each") {
       out += `\${${seg.source.join(".")}.map((${seg.item}) => \`${segmentsToBody(seg.body)}\`).join("")}`;
     } else {
