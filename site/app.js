@@ -155,7 +155,8 @@ THE .agent FORMAT (indentation is 2 spaces, never tabs):
     line one of the prompt...
   outputs[N]{name,type}:   optional. N typed result fields, one per indented row
 
-TYPES: string | number | boolean. Append [] for an array, e.g. string[].
+TYPES: string | number | boolean, or a quoted object type "{a:string;b:number}".
+Append [] for an array (string[], "{...}[]"). Read object fields with x.field.
 
 INTERPOLATION: in the prompt, {inputs.<name>} inserts a declared input's value.
 The name must be one you declared in inputs. Use {{ and }} for literal braces.

@@ -108,11 +108,18 @@ function emitSchema(lines: string[], name: string, fields: FieldDecl[]): void {
 }
 
 function tsType(t: ToaType): string {
-  return t.array ? `${t.base}[]` : t.base;
+  const base =
+    t.base === "object"
+      ? `{ ${(t.fields ?? []).map((f) => `${f.name}: ${tsType(f.type)}`).join("; ")} }`
+      : t.base;
+  return t.array ? `${base}[]` : base;
 }
 
 function zodExpr(t: ToaType): string {
-  const base = `z.${t.base}()`;
+  const base =
+    t.base === "object"
+      ? `z.object({ ${(t.fields ?? []).map((f) => `${f.name}: ${zodExpr(f.type)}`).join(", ")} })`
+      : `z.${t.base}()`;
   return t.array ? `z.array(${base})` : base;
 }
 

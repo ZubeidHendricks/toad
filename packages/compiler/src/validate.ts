@@ -319,13 +319,7 @@ function parsePrompt(
   at: Locator,
 ): AgentAst["prompt"] {
   const ctx: PromptScopeCtx = {
-    inputNames: new Set(inputs.map((f) => f.name)),
-    arrayInputs: new Set(inputs.filter((f) => f.type.array).map((f) => f.name)),
-    boolInputs: new Set(
-      inputs
-        .filter((f) => f.type.base === "boolean" && !f.type.array)
-        .map((f) => f.name),
-    ),
+    inputTypes: new Map(inputs.map((f) => [f.name, f.type])),
     file,
     diagnostics,
     at,
@@ -334,62 +328,82 @@ function parsePrompt(
   for (const message of errors) {
     diagnostics.push(errorDiagnostic("TOA302", message, file, at("prompt")));
   }
-  validatePromptSegments(segments, new Set(), ctx);
+  validatePromptSegments(segments, new Map(), ctx);
   return segments;
 }
 
 interface PromptScopeCtx {
-  inputNames: Set<string>;
-  arrayInputs: Set<string>;
-  boolInputs: Set<string>;
+  inputTypes: Map<string, ToaType>;
   file: string;
   diagnostics: Diagnostic[];
   at: Locator;
 }
 
+const NUMBER_TYPE: ToaType = { base: "number", array: false };
+
+/** Walk a dotted path through object fields; returns the resolved type or null. */
+function resolveFieldPath(type: ToaType, rest: string[]): ToaType | null {
+  let cur = type;
+  for (const seg of rest) {
+    if (cur.array || cur.base !== "object" || cur.fields === undefined) {
+      return null;
+    }
+    const field = cur.fields.find((f) => f.name === seg);
+    if (field === undefined) {
+      return null;
+    }
+    cur = field.type;
+  }
+  return cur;
+}
+
+function badInterp(path: string[], ctx: PromptScopeCtx): void {
+  ctx.diagnostics.push(
+    errorDiagnostic(
+      "TOA301",
+      `invalid interpolation {${path.join(".")}} (unknown name or field)`,
+      ctx.file,
+      ctx.at("prompt"),
+    ),
+  );
+}
+
 function validatePromptSegments(
   segments: PromptSegment[],
-  vars: Set<string>,
+  vars: Map<string, ToaType>,
   ctx: PromptScopeCtx,
 ): void {
   for (const seg of segments) {
     if (seg.kind === "interp") {
       const root = seg.path[0];
       if (root !== undefined && vars.has(root)) {
-        if (seg.path.length !== 1) {
-          ctx.diagnostics.push(
-            errorDiagnostic(
-              "TOA301",
-              `loop variable {${seg.path.join(".")}} has no fields; use {${root}}`,
-              ctx.file,
-              ctx.at("prompt"),
-            ),
-          );
+        if (resolveFieldPath(vars.get(root)!, seg.path.slice(1)) === null) {
+          badInterp(seg.path, ctx);
         }
       } else if (
         root === "inputs" &&
-        seg.path.length === 2 &&
-        ctx.inputNames.has(seg.path[1]!)
+        seg.path.length >= 2 &&
+        ctx.inputTypes.has(seg.path[1]!)
       ) {
-        // ok — a declared input
+        if (
+          resolveFieldPath(
+            ctx.inputTypes.get(seg.path[1]!)!,
+            seg.path.slice(2),
+          ) === null
+        ) {
+          badInterp(seg.path, ctx);
+        }
       } else if (root === "env" && seg.path.length === 2) {
         // ok — an environment variable, resolved at runtime
       } else {
-        ctx.diagnostics.push(
-          errorDiagnostic(
-            "TOA301",
-            `unknown interpolation {${seg.path.join(".")}} (use {inputs.<name>}, {env.<NAME>}, or a loop variable)`,
-            ctx.file,
-            ctx.at("prompt"),
-          ),
-        );
+        badInterp(seg.path, ctx);
       }
     } else if (seg.kind === "each") {
-      const okSource =
-        seg.source.length === 2 &&
-        seg.source[0] === "inputs" &&
-        ctx.arrayInputs.has(seg.source[1]!);
-      if (!okSource) {
+      const sourceType =
+        seg.source.length === 2 && seg.source[0] === "inputs"
+          ? ctx.inputTypes.get(seg.source[1]!)
+          : undefined;
+      if (sourceType === undefined || !sourceType.array) {
         ctx.diagnostics.push(
           errorDiagnostic(
             "TOA303",
@@ -398,42 +412,30 @@ function validatePromptSegments(
             ctx.at("prompt"),
           ),
         );
+        continue;
       }
-      if (vars.has(seg.item)) {
-        ctx.diagnostics.push(
-          errorDiagnostic(
-            "TOA304",
-            `loop variable "${seg.item}" shadows an outer one`,
-            ctx.file,
-            ctx.at("prompt"),
-          ),
-        );
-      }
-      const inner = new Set(vars);
-      inner.add(seg.item);
+      const elementType: ToaType = sourceType.fields
+        ? { base: sourceType.base, array: false, fields: sourceType.fields }
+        : { base: sourceType.base, array: false };
+      const inner = new Map(vars);
+      inner.set(seg.item, elementType);
       if (seg.index !== undefined) {
-        if (vars.has(seg.index)) {
-          ctx.diagnostics.push(
-            errorDiagnostic(
-              "TOA304",
-              `loop index "${seg.index}" shadows an outer variable`,
-              ctx.file,
-              ctx.at("prompt"),
-            ),
-          );
-        }
-        inner.add(seg.index);
+        inner.set(seg.index, NUMBER_TYPE);
       }
       validatePromptSegments(seg.body, inner, ctx);
       if (seg.else !== undefined) {
         validatePromptSegments(seg.else, vars, ctx);
       }
     } else if (seg.kind === "if") {
-      const okCond =
-        seg.cond.length === 2 &&
-        seg.cond[0] === "inputs" &&
-        ctx.boolInputs.has(seg.cond[1]!);
-      if (!okCond) {
+      const condType =
+        seg.cond.length === 2 && seg.cond[0] === "inputs"
+          ? ctx.inputTypes.get(seg.cond[1]!)
+          : undefined;
+      if (
+        condType === undefined ||
+        condType.base !== "boolean" ||
+        condType.array
+      ) {
         ctx.diagnostics.push(
           errorDiagnostic(
             "TOA305",
@@ -450,16 +452,59 @@ function validatePromptSegments(
 }
 
 function parseType(raw: string): ToaType | undefined {
-  let base = raw;
+  let rest = raw.trim();
   let array = false;
-  if (base.endsWith("[]")) {
+  if (rest.endsWith("[]")) {
     array = true;
-    base = base.slice(0, -2);
+    rest = rest.slice(0, -2).trim();
   }
-  if (base === "string" || base === "number" || base === "boolean") {
-    return { base, array };
+  if (rest === "string" || rest === "number" || rest === "boolean") {
+    return { base: rest, array };
+  }
+  if (rest.startsWith("{") && rest.endsWith("}")) {
+    const fields: FieldDecl[] = [];
+    for (const part of splitFields(rest.slice(1, -1))) {
+      const idx = part.indexOf(":");
+      if (idx === -1) {
+        return undefined;
+      }
+      const name = part.slice(0, idx).trim();
+      const fieldType = parseType(part.slice(idx + 1));
+      if (!IDENT.test(name) || fieldType === undefined) {
+        return undefined;
+      }
+      fields.push({ name, type: fieldType });
+    }
+    if (fields.length === 0) {
+      return undefined;
+    }
+    return { base: "object", array, fields };
   }
   return undefined;
+}
+
+/** Split object-field declarations on top-level `;` (brace-aware). */
+function splitFields(s: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let cur = "";
+  for (const ch of s) {
+    if (ch === "{") {
+      depth += 1;
+    } else if (ch === "}") {
+      depth -= 1;
+    }
+    if (ch === ";" && depth === 0) {
+      parts.push(cur);
+      cur = "";
+    } else {
+      cur += ch;
+    }
+  }
+  if (cur.trim().length > 0) {
+    parts.push(cur);
+  }
+  return parts;
 }
 
 function isObject(v: JsonValue): v is JsonObject {

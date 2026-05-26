@@ -35,7 +35,10 @@ is a strict superset of [TOON](https://github.com/toon-format/toon).
 | `prompt` | yes | `prompt: \|` + indented block | the instruction prompt |
 | `outputs` | no | `outputs[N]{name,type}:` + N rows | typed structured result |
 
-**Types:** `string`, `number`, `boolean`. Append `[]` for an array (`string[]`).
+**Types:** `string`, `number`, `boolean`, or a quoted object type like
+`"{title:string;score:number}"`. Append `[]` for an array (`string[]`, or
+`"{...}[]"`). Read object fields with `{inputs.x.field}` or, in a loop,
+`{item.field}`.
 
 **Interpolation:** inside `prompt`, `{inputs.<name>}` inserts a declared input and
 `{env.<NAME>}` inserts an environment variable (`process.env.<NAME>`, empty string
@@ -168,7 +171,8 @@ THE .agent FORMAT (indentation is 2 spaces, never tabs):
     line one of the prompt...
   outputs[N]{name,type}:   optional. N typed result fields, one per indented row
 
-TYPES: string | number | boolean. Append [] for an array, e.g. string[].
+TYPES: string | number | boolean, or a quoted object type "{a:string;b:number}".
+Append [] for an array (string[], "{...}[]"). Read object fields with x.field.
 
 INTERPOLATION: in the prompt, {inputs.<name>} inserts a declared input's value.
 The name must be one you declared in inputs. Use {{ and }} for literal braces.
