@@ -418,7 +418,37 @@ function validatePromptSegments(
         ? { base: sourceType.base, array: false, fields: sourceType.fields }
         : { base: sourceType.base, array: false };
       const inner = new Map(vars);
-      inner.set(seg.item, elementType);
+      if (seg.item.kind === "name") {
+        inner.set(seg.item.name, elementType);
+      } else if (
+        elementType.base !== "object" ||
+        elementType.fields === undefined
+      ) {
+        ctx.diagnostics.push(
+          errorDiagnostic(
+            "TOA306",
+            `cannot destructure {#each ${seg.source.join(".")}}: its elements are not objects`,
+            ctx.file,
+            ctx.at("prompt"),
+          ),
+        );
+      } else {
+        for (const field of seg.item.fields) {
+          const decl = elementType.fields.find((f) => f.name === field);
+          if (decl === undefined) {
+            ctx.diagnostics.push(
+              errorDiagnostic(
+                "TOA306",
+                `{#each … as { ${field} }} — the element has no field "${field}"`,
+                ctx.file,
+                ctx.at("prompt"),
+              ),
+            );
+          } else {
+            inner.set(field, decl.type);
+          }
+        }
+      }
       if (seg.index !== undefined) {
         inner.set(seg.index, NUMBER_TYPE);
       }

@@ -180,7 +180,8 @@ The name must be one you declared in inputs. Use {{ and }} for literal braces.
 
 LOOPS: iterate an array input with {#each inputs.<name> as <item>} ... {/each};
 reference the element with {<item>}. Optional 0-based index: {#each ... as <item>, <i>}.
-Empty-list fallback: {#each ...} ... {:else} ... {/each}.
+Empty-list fallback: {#each ...} ... {:else} ... {/each}. Destructure object
+elements: {#each inputs.rows as {a, b}} ... {a} ... {/each}.
 
 CONDITIONALS: {#if inputs.<flag>} ... {:else if inputs.<other>} ... {:else} ... {/if}
 on boolean inputs; a leading ! negates.

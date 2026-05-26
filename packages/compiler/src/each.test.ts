@@ -14,7 +14,7 @@ describe("{#each} parsing", () => {
       {
         kind: "each",
         source: ["inputs", "sources"],
-        item: "s",
+        item: { kind: "name", name: "s" },
         body: [
           { kind: "text", value: "- " },
           { kind: "interp", path: ["s"] },

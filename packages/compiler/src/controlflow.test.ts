@@ -19,7 +19,11 @@ describe("{#each} index + {:else}", () => {
     const { segments } = parsePromptTemplate(
       "{#each inputs.xs as x, i}\n{i}. {x}\n{/each}",
     );
-    expect(segments[0]).toMatchObject({ kind: "each", item: "x", index: "i" });
+    expect(segments[0]).toMatchObject({
+      kind: "each",
+      item: { kind: "name", name: "x" },
+      index: "i",
+    });
   });
 
   it("compiles the index to .map((it, i) =>", () => {

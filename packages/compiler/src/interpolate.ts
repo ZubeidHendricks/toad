@@ -1,4 +1,4 @@
-import type { PromptSegment } from "./ast.js";
+import type { EachItem, PromptSegment } from "./ast.js";
 
 export interface ParseTemplateResult {
   segments: PromptSegment[];
@@ -10,7 +10,7 @@ type IfSeg = Extract<PromptSegment, { kind: "if" }>;
 
 const PATH = /^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$/;
 const EACH =
-  /^#each\s+([A-Za-z_][A-Za-z0-9_.]*)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s*,\s*([A-Za-z_][A-Za-z0-9_]*))?$/;
+  /^#each\s+([A-Za-z_][A-Za-z0-9_.]*)\s+as\s+(\{[^}]*\}|[A-Za-z_][A-Za-z0-9_]*)(?:\s*,\s*([A-Za-z_][A-Za-z0-9_]*))?$/;
 const IF = /^#if\s+(!?)\s*([A-Za-z_][A-Za-z0-9_.]*)$/;
 const ELSE_IF = /^:else if\s+(!?)\s*([A-Za-z_][A-Za-z0-9_.]*)$/;
 
@@ -26,7 +26,7 @@ interface Frame {
   segs: PromptSegment[];
   // each
   source?: string[];
-  item?: string;
+  item?: EachItem;
   index?: string;
   body?: PromptSegment[];
   // each + if (the {:else} branch)
@@ -78,7 +78,21 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
     }
 
     if (ch === "{") {
-      const end = text.indexOf("}", i + 1);
+      // Find the matching close brace, allowing one nested `{...}` (e.g. a
+      // destructure pattern in `{#each xs as {a, b}}`).
+      let end = -1;
+      let depth = 0;
+      for (let j = i; j < text.length; j++) {
+        if (text[j] === "{") {
+          depth += 1;
+        } else if (text[j] === "}") {
+          depth -= 1;
+          if (depth === 0) {
+            end = j;
+            break;
+          }
+        }
+      }
       if (end === -1) {
         errors.push("unterminated interpolation: missing '}'");
         buf += ch;
@@ -98,11 +112,22 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
         }
         flush();
         const body: PromptSegment[] = [];
+        const bind = m[2]!;
+        const item: EachItem = bind.startsWith("{")
+          ? {
+              kind: "destructure",
+              fields: bind
+                .slice(1, -1)
+                .split(",")
+                .map((s) => s.trim())
+                .filter((s) => s.length > 0),
+            }
+          : { kind: "name", name: bind };
         const frame: Frame = {
           kind: "each",
           segs: body,
           source: m[1]!.split("."),
-          item: m[2]!,
+          item,
           body,
           elseSegs: [],
         };

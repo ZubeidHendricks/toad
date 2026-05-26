@@ -53,4 +53,37 @@ describe("object types", () => {
     const { diagnostics } = analyze(src, "a.agent");
     expect(diagnostics.map((d) => d.code)).toContain("TOA301");
   });
+
+  it("destructures object array elements in {#each}", () => {
+    const src = [
+      "agent: a",
+      "model: m",
+      "inputs[1]{name,type}:",
+      '  rows,"{title:string;score:number}[]"',
+      "prompt: |",
+      "  {#each inputs.rows as { title, score }}",
+      "  {title}: {score}",
+      "  {/each}",
+    ].join("\n");
+    const { ast, diagnostics } = analyze(src, "a.agent");
+    expect(diagnostics).toEqual([]);
+    const code = generate(ast!);
+    expect(code).toContain("inputs.rows.map(({ title, score }) => `");
+    expect(code).toContain("${title}");
+  });
+
+  it("rejects destructuring a missing field (TOA306)", () => {
+    const src = [
+      "agent: a",
+      "model: m",
+      "inputs[1]{name,type}:",
+      '  rows,"{title:string}[]"',
+      "prompt: |",
+      "  {#each inputs.rows as { title, nope }}",
+      "  {title}",
+      "  {/each}",
+    ].join("\n");
+    const { diagnostics } = analyze(src, "a.agent");
+    expect(diagnostics.map((d) => d.code)).toContain("TOA306");
+  });
 });

@@ -138,8 +138,11 @@ function segmentsToBody(segments: PromptSegment[]): string {
           ? `\${process.env.${seg.path.slice(1).join(".")} ?? ""}`
           : `\${${seg.path.join(".")}}`;
     } else if (seg.kind === "each") {
-      const params =
-        seg.index !== undefined ? `${seg.item}, ${seg.index}` : seg.item;
+      const bind =
+        seg.item.kind === "name"
+          ? seg.item.name
+          : `{ ${seg.item.fields.join(", ")} }`;
+      const params = seg.index !== undefined ? `${bind}, ${seg.index}` : bind;
       const loop = `${seg.source.join(".")}.map((${params}) => \`${segmentsToBody(seg.body)}\`).join("")`;
       out +=
         seg.else !== undefined && seg.else.length > 0

@@ -17,13 +17,18 @@ export interface FieldDecl {
   type: ToaType;
 }
 
+/** The binding of an `{#each}` loop: a single name or a destructure pattern. */
+export type EachItem =
+  | { kind: "name"; name: string }
+  | { kind: "destructure"; fields: string[] };
+
 export type PromptSegment =
   | { kind: "text"; value: string }
   | { kind: "interp"; path: string[] }
   | {
       kind: "each";
       source: string[];
-      item: string;
+      item: EachItem;
       index?: string;
       body: PromptSegment[];
       else?: PromptSegment[];
