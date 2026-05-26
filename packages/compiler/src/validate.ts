@@ -244,6 +244,11 @@ function parsePrompt(
   const ctx: PromptScopeCtx = {
     inputNames: new Set(inputs.map((f) => f.name)),
     arrayInputs: new Set(inputs.filter((f) => f.type.array).map((f) => f.name)),
+    boolInputs: new Set(
+      inputs
+        .filter((f) => f.type.base === "boolean" && !f.type.array)
+        .map((f) => f.name),
+    ),
     file,
     diagnostics,
     at,
@@ -259,6 +264,7 @@ function parsePrompt(
 interface PromptScopeCtx {
   inputNames: Set<string>;
   arrayInputs: Set<string>;
+  boolInputs: Set<string>;
   file: string;
   diagnostics: Diagnostic[];
   at: Locator;
@@ -327,6 +333,23 @@ function validatePromptSegments(
       const inner = new Set(vars);
       inner.add(seg.item);
       validatePromptSegments(seg.body, inner, ctx);
+    } else if (seg.kind === "if") {
+      const okCond =
+        seg.cond.length === 2 &&
+        seg.cond[0] === "inputs" &&
+        ctx.boolInputs.has(seg.cond[1]!);
+      if (!okCond) {
+        ctx.diagnostics.push(
+          errorDiagnostic(
+            "TOA305",
+            `{#if ${seg.cond.join(".")}} must test a boolean input (a "boolean" type)`,
+            ctx.file,
+            ctx.at("prompt"),
+          ),
+        );
+      }
+      validatePromptSegments(seg.then, vars, ctx);
+      validatePromptSegments(seg.else, vars, ctx);
     }
   }
 }
