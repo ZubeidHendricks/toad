@@ -43,6 +43,18 @@ is a strict superset of [TOON](https://github.com/toon-format/toon).
 **Counts must match:** `inputs[2]{...}` has exactly two indented rows;
 `tools[2]: a,b` lists exactly two names.
 
+**Loops:** iterate an array input inside the prompt with
+`{#each inputs.<name> as <item>}` … `{/each}`. The body repeats once per element;
+reference the element with `{<item>}`:
+
+```
+prompt: |
+  Summarize these notes:
+  {#each inputs.notes as note}
+  - {note}
+  {/each}
+```
+
 ### A complete example
 
 `researcher.agent`:
@@ -110,7 +122,9 @@ TYPES: string | number | boolean. Append [] for an array, e.g. string[].
 
 INTERPOLATION: in the prompt, {inputs.<name>} inserts a declared input's value.
 The name must be one you declared in inputs. Use {{ and }} for literal braces.
-No other expressions are allowed.
+
+LOOPS: iterate an array input with {#each inputs.<name> as <item>} ... {/each}.
+The body repeats once per element; reference the element with {<item>}.
 
 RULES:
 - Output only the .agent file.
@@ -147,6 +161,21 @@ prompt: |
   {inputs.text}
 outputs[1]{name,type}:
   bullets,string[]
+
+EXAMPLE 3 — a loop over an array input:
+
+agent: digest
+model: claude-opus-4-7
+description: Turn a list of notes into a short summary.
+inputs[1]{name,type}:
+  notes,string[]
+prompt: |
+  Summarize these notes into a short paragraph:
+  {#each inputs.notes as note}
+  - {note}
+  {/each}
+outputs[1]{name,type}:
+  summary,string
 
 Now write a .agent file for this task:
 <describe your agent here>

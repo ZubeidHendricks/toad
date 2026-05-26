@@ -15,6 +15,32 @@ outputs[2]{name,type}:
   summary,string
   sources,string[]`;
 
+const PRESETS = {
+  researcher: AGENT_SRC,
+  summarizer: `agent: summarizer
+model: claude-opus-4-7
+description: Summarize text into key bullet points.
+inputs[1]{name,type}:
+  text,string
+prompt: |
+  Summarize the following into 3-5 concise bullet points:
+  {inputs.text}
+outputs[1]{name,type}:
+  bullets,string[]`,
+  digest: `agent: digest
+model: claude-opus-4-7
+description: Turn a list of notes into a short summary.
+inputs[1]{name,type}:
+  notes,string[]
+prompt: |
+  Summarize these notes into a short paragraph:
+  {#each inputs.notes as note}
+  - {note}
+  {/each}
+outputs[1]{name,type}:
+  summary,string`,
+};
+
 const $ = (id) => document.getElementById(id);
 const setText = (id, text) => {
   const el = $(id);
@@ -70,6 +96,16 @@ if (compile) {
       timer = setTimeout(run, 150);
     });
     run();
+
+    document.querySelectorAll("[data-preset]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const key = btn.getAttribute("data-preset");
+        if (key && PRESETS[key]) {
+          input.value = PRESETS[key];
+          run();
+        }
+      });
+    });
   }
 } else {
   const note = "// compiler bundle unavailable — run `pnpm build:site`";
@@ -105,7 +141,9 @@ TYPES: string | number | boolean. Append [] for an array, e.g. string[].
 
 INTERPOLATION: in the prompt, {inputs.<name>} inserts a declared input's value.
 The name must be one you declared in inputs. Use {{ and }} for literal braces.
-No other expressions are allowed.
+
+LOOPS: iterate an array input with {#each inputs.<name> as <item>} ... {/each}.
+The body repeats once per element; reference the element with {<item>}.
 
 RULES:
 - Output only the .agent file.
@@ -142,6 +180,21 @@ prompt: |
   {inputs.text}
 outputs[1]{name,type}:
   bullets,string[]
+
+EXAMPLE 3 — a loop over an array input:
+
+agent: digest
+model: claude-opus-4-7
+description: Turn a list of notes into a short summary.
+inputs[1]{name,type}:
+  notes,string[]
+prompt: |
+  Summarize these notes into a short paragraph:
+  {#each inputs.notes as note}
+  - {note}
+  {/each}
+outputs[1]{name,type}:
+  summary,string
 
 Now write a .agent file for this task:
 <describe your agent here>`;
