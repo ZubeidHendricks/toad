@@ -34,8 +34,8 @@ inputs[1]{name,type}:
   notes,string[]
 prompt: |
   Summarize these notes into a short paragraph:
-  {#each inputs.notes as note}
-  - {note}
+  {#each inputs.notes as note, i}
+  {i}. {note}
   {/each}
 outputs[1]{name,type}:
   summary,string`,
@@ -161,11 +161,12 @@ INTERPOLATION: in the prompt, {inputs.<name>} inserts a declared input's value.
 The name must be one you declared in inputs. Use {{ and }} for literal braces.
 {env.<NAME>} inserts an environment variable (process.env.<NAME>).
 
-LOOPS: iterate an array input with {#each inputs.<name> as <item>} ... {/each}.
-The body repeats once per element; reference the element with {<item>}.
+LOOPS: iterate an array input with {#each inputs.<name> as <item>} ... {/each};
+reference the element with {<item>}. Optional 0-based index: {#each ... as <item>, <i>}.
+Empty-list fallback: {#each ...} ... {:else} ... {/each}.
 
-CONDITIONALS: include a section only when a boolean input is set, with
-{#if inputs.<flag>} ... {:else} ... {/if}. A leading ! negates the condition.
+CONDITIONALS: {#if inputs.<flag>} ... {:else if inputs.<other>} ... {:else} ... {/if}
+on boolean inputs; a leading ! negates.
 
 RULES:
 - Output only the .agent file.

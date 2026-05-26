@@ -44,9 +44,9 @@ if unset). `{{` and `}}` are literal braces.
 **Counts must match:** `inputs[2]{...}` has exactly two indented rows;
 `tools[2]: a,b` lists exactly two names.
 
-**Loops:** iterate an array input inside the prompt with
-`{#each inputs.<name> as <item>}` … `{/each}`. The body repeats once per element;
-reference the element with `{<item>}`:
+**Loops:** iterate an array input with `{#each inputs.<name> as <item>}` …
+`{/each}`; reference the element with `{<item>}`. Add a 0-based index with
+`{#each … as <item>, <i>}`, and an empty-list fallback with `{:else}`:
 
 ```
 prompt: |
@@ -56,8 +56,9 @@ prompt: |
   {/each}
 ```
 
-**Conditionals:** include a section only when a boolean input is set, with
-`{#if inputs.<flag>}` … `{:else}` … `{/if}` (a leading `!` negates):
+**Conditionals:** include a section based on a boolean input, with
+`{#if inputs.<flag>}` … `{:else if inputs.<other>}` … `{:else}` … `{/if}`
+(a leading `!` negates):
 
 ```
 prompt: |
@@ -137,11 +138,12 @@ INTERPOLATION: in the prompt, {inputs.<name>} inserts a declared input's value.
 The name must be one you declared in inputs. Use {{ and }} for literal braces.
 {env.<NAME>} inserts an environment variable (process.env.<NAME>).
 
-LOOPS: iterate an array input with {#each inputs.<name> as <item>} ... {/each}.
-The body repeats once per element; reference the element with {<item>}.
+LOOPS: iterate an array input with {#each inputs.<name> as <item>} ... {/each};
+reference the element with {<item>}. Optional 0-based index: {#each ... as <item>, <i>}.
+Empty-list fallback: {#each ...} ... {:else} ... {/each}.
 
-CONDITIONALS: include a section only when a boolean input is set, with
-{#if inputs.<flag>} ... {:else} ... {/if}. A leading ! negates the condition.
+CONDITIONALS: {#if inputs.<flag>} ... {:else if inputs.<other>} ... {:else} ... {/if}
+on boolean inputs; a leading ! negates.
 
 RULES:
 - Output only the .agent file.
