@@ -17,7 +17,8 @@ export interface FieldDecl {
 
 export type PromptSegment =
   | { kind: "text"; value: string }
-  | { kind: "interp"; path: string[] };
+  | { kind: "interp"; path: string[] }
+  | { kind: "each"; source: string[]; item: string; body: PromptSegment[] };
 
 export interface AgentAst {
   /** `agent` — also the emitted export symbol and filename stem. */

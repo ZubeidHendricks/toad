@@ -1,5 +1,5 @@
 import type { JsonObject, JsonValue } from "@toon-format/toon";
-import type { AgentAst, FieldDecl, ToaType } from "./ast.js";
+import type { AgentAst, FieldDecl, PromptSegment, ToaType } from "./ast.js";
 import { errorDiagnostic, type Diagnostic } from "./diagnostics.js";
 import { parsePromptTemplate } from "./interpolate.js";
 
@@ -241,31 +241,94 @@ function parsePrompt(
   diagnostics: Diagnostic[],
   at: Locator,
 ): AgentAst["prompt"] {
-  const inputNames = new Set(inputs.map((f) => f.name));
+  const ctx: PromptScopeCtx = {
+    inputNames: new Set(inputs.map((f) => f.name)),
+    arrayInputs: new Set(inputs.filter((f) => f.type.array).map((f) => f.name)),
+    file,
+    diagnostics,
+    at,
+  };
   const { segments, errors } = parsePromptTemplate(text);
   for (const message of errors) {
     diagnostics.push(errorDiagnostic("TOA302", message, file, at("prompt")));
   }
+  validatePromptSegments(segments, new Set(), ctx);
+  return segments;
+}
+
+interface PromptScopeCtx {
+  inputNames: Set<string>;
+  arrayInputs: Set<string>;
+  file: string;
+  diagnostics: Diagnostic[];
+  at: Locator;
+}
+
+function validatePromptSegments(
+  segments: PromptSegment[],
+  vars: Set<string>,
+  ctx: PromptScopeCtx,
+): void {
   for (const seg of segments) {
-    if (seg.kind !== "interp") {
-      continue;
-    }
-    const ok =
-      seg.path.length === 2 &&
-      seg.path[0] === "inputs" &&
-      inputNames.has(seg.path[1]!);
-    if (!ok) {
-      diagnostics.push(
-        errorDiagnostic(
-          "TOA301",
-          `unknown interpolation {${seg.path.join(".")}} (only {inputs.<name>} is supported)`,
-          file,
-          at("prompt"),
-        ),
-      );
+    if (seg.kind === "interp") {
+      const root = seg.path[0];
+      if (root !== undefined && vars.has(root)) {
+        if (seg.path.length !== 1) {
+          ctx.diagnostics.push(
+            errorDiagnostic(
+              "TOA301",
+              `loop variable {${seg.path.join(".")}} has no fields; use {${root}}`,
+              ctx.file,
+              ctx.at("prompt"),
+            ),
+          );
+        }
+      } else if (
+        root === "inputs" &&
+        seg.path.length === 2 &&
+        ctx.inputNames.has(seg.path[1]!)
+      ) {
+        // ok — a declared input
+      } else {
+        ctx.diagnostics.push(
+          errorDiagnostic(
+            "TOA301",
+            `unknown interpolation {${seg.path.join(".")}} (use {inputs.<name>} or a loop variable)`,
+            ctx.file,
+            ctx.at("prompt"),
+          ),
+        );
+      }
+    } else if (seg.kind === "each") {
+      const okSource =
+        seg.source.length === 2 &&
+        seg.source[0] === "inputs" &&
+        ctx.arrayInputs.has(seg.source[1]!);
+      if (!okSource) {
+        ctx.diagnostics.push(
+          errorDiagnostic(
+            "TOA303",
+            `{#each ${seg.source.join(".")}} must iterate a declared array input (a "[]" type)`,
+            ctx.file,
+            ctx.at("prompt"),
+          ),
+        );
+      }
+      if (vars.has(seg.item)) {
+        ctx.diagnostics.push(
+          errorDiagnostic(
+            "TOA304",
+            `loop variable "${seg.item}" shadows an outer one`,
+            ctx.file,
+            ctx.at("prompt"),
+          ),
+        );
+      }
+      const inner = new Set(vars);
+      inner.add(seg.item);
+      validatePromptSegments(seg.body, inner, ctx);
     }
   }
-  return segments;
 }
 
 function parseType(raw: string): ToaType | undefined {

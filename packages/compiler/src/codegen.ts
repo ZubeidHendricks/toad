@@ -88,14 +88,21 @@ function zodExpr(t: ToaType): string {
 }
 
 function promptExpr(segments: PromptSegment[]): string {
-  let body = "";
+  return `\`${segmentsToBody(segments)}\``;
+}
+
+function segmentsToBody(segments: PromptSegment[]): string {
+  let out = "";
   for (const seg of segments) {
-    body +=
-      seg.kind === "text"
-        ? escapeTemplate(seg.value)
-        : `\${${seg.path.join(".")}}`;
+    if (seg.kind === "text") {
+      out += escapeTemplate(seg.value);
+    } else if (seg.kind === "interp") {
+      out += `\${${seg.path.join(".")}}`;
+    } else {
+      out += `\${${seg.source.join(".")}.map((${seg.item}) => \`${segmentsToBody(seg.body)}\`).join("")}`;
+    }
   }
-  return `\`${body}\``;
+  return out;
 }
 
 function escapeTemplate(s: string): string {
