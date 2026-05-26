@@ -103,6 +103,14 @@ main {
   text-align: center;
   padding: 90px 0 60px;
 }
+.logo {
+  width: 112px;
+  height: 112px;
+  border-radius: 22px;
+  margin: 0 auto 22px;
+  display: block;
+  box-shadow: 0 0 40px rgba(74, 222, 128, 0.25);
+}
 .eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.18em;

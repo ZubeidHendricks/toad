@@ -1,5 +1,9 @@
 # TOAD
 
+<p align="center">
+  <img src="toad_robo.png" alt="TOAD" width="160" />
+</p>
+
 **TOAD — Token-Oriented Agentic Development.** A compile-first framework for
 building AI agents.
 
