@@ -66,7 +66,7 @@ Types are `string` / `number` / `boolean`, a quoted object like
 `"{a:string;b:number}"`, and any of those with `[]`. Every reference is validated
 against the agent's typed inputs, with located `file:line:col` diagnostics.
 
-## The runtime (`@toa/runtime`)
+## The runtime (`@toad/runtime`)
 
 The generated agent runs a tool-use loop over the Anthropic API with:
 
@@ -78,8 +78,8 @@ The generated agent runs a tool-use loop over the Anthropic API with:
 
 ## Packages
 
-- **`@toa/compiler`** — the `toac` compiler (`.agent` → `.ts`).
-- **`@toa/runtime`** — `defineTool`, `createAgent`, the tool loop, and the above.
+- **`@toad/compiler`** — the `toac` compiler (`.agent` → `.ts`).
+- **`@toad/runtime`** — `defineTool`, `createAgent`, the tool loop, and the above.
 
 ## Develop
 

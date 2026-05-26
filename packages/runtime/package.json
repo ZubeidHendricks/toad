@@ -1,7 +1,28 @@
 {
-  "name": "@toa/runtime",
+  "name": "@toad/runtime",
   "version": "0.1.0",
-  "private": true,
+  "description": "Runtime for TOAD agents — the tool-use loop, structured output, and typed errors that compiled .agent modules run on, over the Anthropic API.",
+  "keywords": [
+    "toad",
+    "ai",
+    "agents",
+    "anthropic",
+    "claude",
+    "llm",
+    "tool-use",
+    "toon"
+  ],
+  "homepage": "https://zubeidhendricks.github.io/toad/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZubeidHendricks/toad.git",
+    "directory": "packages/runtime"
+  },
+  "bugs": {
+    "url": "https://github.com/ZubeidHendricks/toad/issues"
+  },
+  "author": "Zubeid Hendricks",
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,6 +35,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",

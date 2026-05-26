@@ -1,4 +1,4 @@
-import { defineTool } from "@toa/runtime";
+import { defineTool } from "@toad/runtime";
 import { z } from "zod";
 
 /**

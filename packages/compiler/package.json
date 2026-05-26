@@ -1,7 +1,30 @@
 {
-  "name": "@toa/compiler",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@toad/compiler",
+  "version": "0.1.0",
+  "description": "The toac compiler for TOAD — turns a declarative .agent file (a TOON superset) into readable, fully-typed TypeScript that runs on @toad/runtime.",
+  "keywords": [
+    "toad",
+    "toac",
+    "compiler",
+    "ai",
+    "agents",
+    "anthropic",
+    "claude",
+    "llm",
+    "toon",
+    "codegen"
+  ],
+  "homepage": "https://zubeidhendricks.github.io/toad/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZubeidHendricks/toad.git",
+    "directory": "packages/compiler"
+  },
+  "bugs": {
+    "url": "https://github.com/ZubeidHendricks/toad/issues"
+  },
+  "author": "Zubeid Hendricks",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "toac": "./dist/bin.js"
@@ -17,6 +40,9 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { compile, COMPILER_VERSION } from "./index.js";
 
-describe("@toa/compiler", () => {
+describe("@toad/compiler", () => {
   it("exposes a version", () => {
-    expect(COMPILER_VERSION).toBe("0.0.0");
+    expect(COMPILER_VERSION).toBe("0.1.0");
   });
 
   it("returns diagnostics (and no code) for an invalid agent", () => {

@@ -15,11 +15,11 @@ criteria; FR refs point at the PRD.
 
 ## E0 — Repo scaffold
 
-- **S0.1 — Monorepo skeleton.** pnpm workspace + Turbo; `@toa/runtime` and
-  `@toa/compiler` packages (empty, with build/test/typecheck/lint scripts);
+- **S0.1 — Monorepo skeleton.** pnpm workspace + Turbo; `@toad/runtime` and
+  `@toad/compiler` packages (empty, with build/test/typecheck/lint scripts);
   `tsconfig.base.json` (strict), Vitest, ESLint, Prettier; minimal CI.
   - *AC:* `pnpm install` clean; `pnpm -w typecheck`, `lint`, `test`, `build` all
-    pass on the empty packages; `@toa/compiler` exposes a `toac` bin stub.
+    pass on the empty packages; `@toad/compiler` exposes a `toac` bin stub.
   - *Deps (await approval, ages verified at install):* dev-only —
     `typescript`, `vitest`, `turbo`, `eslint`, `prettier`, a bundler (`tsup`).
 

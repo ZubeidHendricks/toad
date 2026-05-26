@@ -47,7 +47,7 @@ importers:
 
   examples/researcher:
     dependencies:
-      '@toa/runtime':
+      '@toad/runtime':
         specifier: workspace:*
         version: link:../../packages/runtime
       zod:

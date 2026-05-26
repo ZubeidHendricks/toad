@@ -1,5 +1,5 @@
 /**
- * `@toa/compiler` — the `toac` compiler: `.agent` (a TOON superset) -> typed `.ts`.
+ * `@toad/compiler` — the `toac` compiler: `.agent` (a TOON superset) -> typed `.ts`.
  * Pipeline: preprocess -> TOON decode -> validate -> codegen.
  * See `_bmad-output/architecture.md`.
  */
@@ -7,7 +7,7 @@ import { analyze } from "./analyze.js";
 import { generate } from "./codegen.js";
 import type { Diagnostic } from "./diagnostics.js";
 
-export const COMPILER_VERSION = "0.0.0";
+export const COMPILER_VERSION = "0.1.0";
 
 export type { Diagnostic } from "./diagnostics.js";
 export { errorDiagnostic, formatDiagnostic } from "./diagnostics.js";
