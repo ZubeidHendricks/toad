@@ -45,8 +45,15 @@ export interface LlmResponse {
   stop_reason: string | null;
 }
 
+/** A streamed text delta from the model. */
+export interface LlmStreamChunk {
+  text?: string;
+}
+
 export interface LlmClient {
   create(req: LlmRequest): Promise<LlmResponse>;
+  /** Optional: stream text deltas for a request. */
+  stream?(req: LlmRequest): AsyncIterable<LlmStreamChunk>;
 }
 
 /**
@@ -64,6 +71,21 @@ export function anthropicClient(options?: { apiKey?: string }): LlmClient {
         req as never,
       )) as unknown as LlmResponse;
       return { content: res.content, stop_reason: res.stop_reason };
+    },
+    async *stream(req) {
+      const events = client.messages.stream(req as never) as AsyncIterable<{
+        type?: string;
+        delta?: { type?: string; text?: string };
+      }>;
+      for await (const event of events) {
+        if (
+          event.type === "content_block_delta" &&
+          event.delta?.type === "text_delta" &&
+          typeof event.delta.text === "string"
+        ) {
+          yield { text: event.delta.text };
+        }
+      }
     },
   };
 }

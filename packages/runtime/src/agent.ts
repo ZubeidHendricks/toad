@@ -43,6 +43,8 @@ export interface AgentConfig<I, O> {
 export interface Agent<I, O> {
   readonly name: string;
   run(inputs: I): Promise<O>;
+  /** Stream the model's text for the prompt (no tools / structured output). */
+  stream(inputs: I): AsyncIterable<string>;
   /** Expose this agent as a tool that another agent can call. */
   asTool(options?: { description?: string }): ToolDef<I>;
 }
@@ -172,6 +174,35 @@ export function createAgent<I, O = string>(
       }
 
       throw new MaxTurnsError(maxTurns);
+    },
+    stream(inputs: I): AsyncIterable<string> {
+      const client = config.client ?? anthropicClient();
+      const userText = config.prompt(inputs);
+      async function* generate(): AsyncGenerator<string> {
+        if (client.stream === undefined) {
+          throw new Error(
+            `agent "${config.name}": the LLM client does not support streaming`,
+          );
+        }
+        const req: LlmRequest = {
+          model: config.model,
+          max_tokens: maxTokens,
+          system: [
+            {
+              type: "text",
+              text: systemText,
+              cache_control: { type: "ephemeral" },
+            },
+          ],
+          messages: [{ role: "user", content: userText }],
+        };
+        for await (const chunk of client.stream(req)) {
+          if (chunk.text !== undefined) {
+            yield chunk.text;
+          }
+        }
+      }
+      return generate();
     },
     asTool(options) {
       const input =

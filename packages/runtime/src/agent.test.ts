@@ -208,4 +208,25 @@ describe("createAgent", () => {
     expect(await agent.run({})).toBe("done");
     expect(events).toEqual(["call:search", "result:search"]);
   });
+
+  it("streams text deltas via agent.stream()", async () => {
+    const client: LlmClient = {
+      create: async () => ({ stop_reason: "end_turn", content: [] }),
+      async *stream() {
+        yield { text: "Hello, " };
+        yield { text: "world" };
+      },
+    };
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      prompt: () => "hi",
+      client,
+    });
+    let out = "";
+    for await (const chunk of agent.stream({})) {
+      out += chunk;
+    }
+    expect(out).toBe("Hello, world");
+  });
 });

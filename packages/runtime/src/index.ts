@@ -20,4 +20,5 @@ export {
   type LlmClient,
   type LlmRequest,
   type LlmResponse,
+  type LlmStreamChunk,
 } from "./client.js";
