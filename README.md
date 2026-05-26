@@ -100,5 +100,5 @@ copy-paste prompt that turns any LLM into a TOAD author.
 
 ## Status
 
-79 passing tests, green gate (typecheck · test · lint · build). Design docs live
+82 passing tests, green gate (typecheck · test · lint · build). Design docs live
 in [`_bmad-output/`](./_bmad-output/).
