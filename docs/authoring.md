@@ -55,6 +55,18 @@ prompt: |
   {/each}
 ```
 
+**Conditionals:** include a section only when a boolean input is set, with
+`{#if inputs.<flag>}` … `{:else}` … `{/if}` (a leading `!` negates):
+
+```
+prompt: |
+  {#if inputs.detailed}
+  Write a thorough analysis.
+  {:else}
+  Keep it brief.
+  {/if}
+```
+
 ### A complete example
 
 `researcher.agent`:
@@ -125,6 +137,9 @@ The name must be one you declared in inputs. Use {{ and }} for literal braces.
 
 LOOPS: iterate an array input with {#each inputs.<name> as <item>} ... {/each}.
 The body repeats once per element; reference the element with {<item>}.
+
+CONDITIONALS: include a section only when a boolean input is set, with
+{#if inputs.<flag>} ... {:else} ... {/if}. A leading ! negates the condition.
 
 RULES:
 - Output only the .agent file.

@@ -39,6 +39,24 @@ prompt: |
   {/each}
 outputs[1]{name,type}:
   summary,string`,
+  report: `agent: report
+model: claude-opus-4-7
+description: Write a report from findings, optionally detailed.
+inputs[2]{name,type}:
+  findings,string[]
+  detailed,boolean
+prompt: |
+  Write a report from these findings:
+  {#each inputs.findings as f}
+  - {f}
+  {/each}
+  {#if inputs.detailed}
+  Include a thorough analysis section.
+  {:else}
+  Keep it to a single paragraph.
+  {/if}
+outputs[1]{name,type}:
+  report,string`,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -144,6 +162,9 @@ The name must be one you declared in inputs. Use {{ and }} for literal braces.
 
 LOOPS: iterate an array input with {#each inputs.<name> as <item>} ... {/each}.
 The body repeats once per element; reference the element with {<item>}.
+
+CONDITIONALS: include a section only when a boolean input is set, with
+{#if inputs.<flag>} ... {:else} ... {/if}. A leading ! negates the condition.
 
 RULES:
 - Output only the .agent file.
