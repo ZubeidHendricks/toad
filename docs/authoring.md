@@ -113,7 +113,7 @@ export const fetch_page = defineTool({
 
 Copy the block below, paste it into Claude (as a system prompt or a normal
 message), replace the last line with your task, and you'll get a `.agent` file
-you can drop straight into the [playground](https://zubeidhendricks.github.io/toa/#playground).
+you can drop straight into the [playground](https://zubeidhendricks.github.io/toad/#playground).
 
 ````text
 You write TOAD agent files. TOAD is a compile-first framework: an agent is a
@@ -206,5 +206,5 @@ Now write a .agent file for this task:
 - If `toac` reports an error, it's located (`file:line:col CODE: message`) — the
   common ones are a missing required key, a count that doesn't match its rows, or
   a `{inputs.x}` that isn't declared.
-- Paste any `.agent` into the [playground](https://zubeidhendricks.github.io/toa/#playground)
+- Paste any `.agent` into the [playground](https://zubeidhendricks.github.io/toad/#playground)
   to see the generated TypeScript live.
