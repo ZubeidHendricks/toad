@@ -5,5 +5,5 @@
     "moduleResolution": "bundler",
     "noEmit": true
   },
-  "include": ["researcher.ts", "researcher.tools.ts"]
+  "include": ["researcher.ts", "researcher.tools.ts", "live.test.ts"]
 }

@@ -22,11 +22,17 @@ confirms the generated agent + tools type-check.
 
 ## Run (needs an API key)
 
-The generated `researcher` is a runnable agent. With `ANTHROPIC_API_KEY` set and a
-TS runner (e.g. `tsx`):
+`live.test.ts` runs the generated agent end-to-end against Claude. With a key set,
+it executes; without one it's skipped (so CI stays offline and free):
+
+```bash
+ANTHROPIC_API_KEY=sk-... pnpm --filter @toa/example-researcher test
+```
+
+In code, the generated agent is just:
 
 ```ts
-import { researcher } from "./researcher.js";
+import { researcher } from "./researcher";
 const out = await researcher.run({ topic: "the TOON format" });
 console.log(out.summary, out.sources);
 ```
