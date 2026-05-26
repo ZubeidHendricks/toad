@@ -337,6 +337,22 @@ pre code {
   border-radius: var(--radius);
 }
 
+/* Language showcase */
+.language {
+  padding: 50px 0;
+  border-top: 1px solid var(--border);
+}
+.language h2 {
+  font-size: 1.9rem;
+  margin: 0 0 8px;
+}
+.language pre {
+  margin-top: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
 /* How it works + Write with AI */
 .how,
 .ai {

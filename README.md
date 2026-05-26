@@ -9,21 +9,19 @@ building AI agents.
 
 You describe an agent in a small, token-efficient `.agent` file, and the `toac`
 compiler turns it into readable, fully-typed TypeScript that runs on Claude. The
-syntax is derived from [TOON](https://github.com/toon-format/toon)
-(Token-Oriented Object Notation), so an agent reads like compact data rather than
-boilerplate — cheap to write and review for humans _and_ for the LLMs that
-increasingly author agents.
+syntax is derived from [TOON](https://github.com/toon-format/toon) (Token-Oriented
+Object Notation), so an agent reads like compact data rather than boilerplate —
+cheap to write and review for humans _and_ for the LLMs that increasingly author
+agents.
+
+**🐸 Live site + in-browser playground: https://zubeidhendricks.github.io/toad/**
 
 The name spells out the idea:
 
-- **T**oken-**O**riented — agents are written in TOON-derived syntax that uses
-  far fewer tokens than JSON and hands a model an explicit schema to follow.
+- **T**oken-**O**riented — agents are written in TOON-derived syntax that uses far
+  fewer tokens than JSON and hands a model an explicit schema to follow.
 - **A**gentic **D**evelopment — defining, compiling, type-checking, and running
   agents is the whole workflow.
-
-TOAD is a **strict superset of TOON**: structural parsing is delegated to TOON's
-spec-conformant decoder, and TOAD adds `prompt: |` block scalars and
-`{inputs.x}` interpolation on top.
 
 ## What an agent looks like
 
@@ -45,26 +43,45 @@ outputs[2]{name,type}:
   sources,string[]
 ```
 
-`toac build researcher.agent` emits a typed `researcher.ts` that exports a runnable
-agent: typed `inputs`/`outputs`, tools wired from a co-located `researcher.tools.ts`,
-and a tool-use loop with structured output. Tool logic stays in plain TypeScript —
-the escape hatch for anything the declarative layer shouldn't do.
+`toac build researcher.agent` emits a typed `researcher.ts` exporting a runnable
+agent. Tool bodies live in a co-located `researcher.tools.ts`.
 
-## Why TOON syntax
+## The language
 
-- **Token-efficient** — an agent definition is ~28% of the tokens of the equivalent
-  JSON-schema + SDK boilerplate it replaces (measured on the bundled example).
-- **Schema-explicit** — `[N]` lengths and `{field}` headers hand a model the
-  structure up front, which measurably improves how reliably it can generate one.
-- **Lossless JSON** — interops with existing tool schemas, configs, and datasets.
+A `.agent` file is a strict superset of TOON. Inside `prompt:` you get a small,
+type-checked template language:
+
+| Construct      | Example                                                      |
+| -------------- | ------------------------------------------------------------ |
+| Interpolation  | `{inputs.topic}`                                             |
+| Environment    | `{env.API_BASE}`                                             |
+| Object fields  | `{inputs.user.name}`                                         |
+| Loops          | `{#each inputs.items as x, i}{i}. {x}{/each}`                |
+| Empty fallback | `{#each xs as x}…{:else}none{/each}`                         |
+| Destructuring  | `{#each rows as {title, score}}…{/each}`                     |
+| Conditionals   | `{#if inputs.verbose}…{:else if inputs.brief}…{:else}…{/if}` |
+| Literal braces | `{{` and `}}`                                                |
+
+Types are `string` / `number` / `boolean`, a quoted object like
+`"{a:string;b:number}"`, and any of those with `[]`. Every reference is validated
+against the agent's typed inputs, with located `file:line:col` diagnostics.
+
+## The runtime (`@toa/runtime`)
+
+The generated agent runs a tool-use loop over the Anthropic API with:
+
+- **Structured output** — declared `outputs` become a typed, validated result.
+- **Composition** — use one agent as another's tool (`uses:` or `agent.asTool()`).
+- **Lifecycle** — `retries`, `maxTurns`, and `onToolCall` / `onToolResult` /
+  `onError` hooks.
+- **Streaming** — `agent.stream(inputs)` yields text deltas.
 
 ## Packages
 
 - **`@toa/compiler`** — the `toac` compiler (`.agent` → `.ts`).
-- **`@toa/runtime`** — the agent runtime: `defineTool`, `createAgent`, the tool
-  loop, structured output, and typed errors.
+- **`@toa/runtime`** — `defineTool`, `createAgent`, the tool loop, and the above.
 
-## Quick start
+## Develop
 
 ```bash
 pnpm install
@@ -78,15 +95,10 @@ node packages/compiler/dist/bin.js build examples/researcher/researcher.agent
 ```
 
 See [`examples/researcher`](./examples/researcher) for a complete, type-checked
-example.
-
-## Authoring agents
-
-New to TOAD? [`docs/authoring.md`](./docs/authoring.md) explains the `.agent`
-format and includes a copy-paste prompt that turns any LLM into a TOAD author.
+example, and [`docs/authoring.md`](./docs/authoring.md) for the full format plus a
+copy-paste prompt that turns any LLM into a TOAD author.
 
 ## Status
 
-MVP complete — the full pipeline (`.agent` → `toac` → typed, runnable `.ts`) works,
-with 45 passing tests. Design docs live in [`_bmad-output/`](./_bmad-output/)
-(`product-brief.md`, `prd.md`, `architecture.md`, `epics.md`).
+79 passing tests, green gate (typecheck · test · lint · build). Design docs live
+in [`_bmad-output/`](./_bmad-output/).

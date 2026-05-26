@@ -57,6 +57,27 @@ prompt: |
   {/if}
 outputs[1]{name,type}:
   report,string`,
+  brief: `agent: brief
+model: claude-opus-4-7
+description: Summarize sources for an audience, optionally in detail.
+inputs[3]{name,type}:
+  sources,"{title:string;url:string}[]"
+  detailed,boolean
+  audience,string
+prompt: |
+  Write a brief for {inputs.audience}.
+  {#each inputs.sources as {title, url}, i}
+  {i}. {title} — {url}
+  {:else}
+  No sources provided.
+  {/each}
+  {#if inputs.detailed}
+  Include a thorough analysis section.
+  {:else}
+  Keep it to a single paragraph.
+  {/if}
+outputs[1]{name,type}:
+  brief,string`,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -66,6 +87,7 @@ const setText = (id, text) => {
 };
 
 setText("src-agent", AGENT_SRC);
+setText("lang-example", PRESETS.brief);
 
 // Load the in-browser compiler. If it fails, the page still works — only the
 // generated-output panes degrade.

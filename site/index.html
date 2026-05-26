@@ -19,6 +19,7 @@
       <a class="brand" href="#top">TOAD</a>
       <nav>
         <a href="#showcase">Example</a>
+        <a href="#language">Language</a>
         <a href="#features">Features</a>
         <a href="#playground">Playground</a>
         <a
@@ -133,6 +134,15 @@
         </div>
       </section>
 
+      <section id="language" class="language">
+        <h2>One small language</h2>
+        <p class="muted">
+          Loops, conditionals, object fields, and interpolation — all type-checked
+          against the agent's typed inputs. A kitchen-sink agent:
+        </p>
+        <pre><code id="lang-example"></code></pre>
+      </section>
+
       <section id="how" class="how">
         <h2>How it works</h2>
         <ol class="steps">
@@ -196,6 +206,9 @@
           </button>
           <button type="button" class="chip" data-preset="report">
             report ({#if})
+          </button>
+          <button type="button" class="chip" data-preset="brief">
+            brief (kitchen sink)
           </button>
         </div>
         <div class="pg">
