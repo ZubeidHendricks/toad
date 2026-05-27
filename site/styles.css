@@ -167,6 +167,17 @@ main {
   color: #04140c;
   border: none;
 }
+.badges {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+.badges img {
+  height: 20px;
+  display: block;
+}
 .sub {
   margin-top: 26px;
   color: var(--muted);
