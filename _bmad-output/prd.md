@@ -21,7 +21,7 @@ These close the brief's open questions and frame the requirements below.
 | D2 | DSL vs. escape hatch | **Tiny DSL**: declarative keys + `{ }` interpolation in strings only. **No `{#if}`/`{#each}` in MVP.** All logic → TS. | Keep the surface non-Turing-complete and LLM-predictable. |
 | D3 | Escape-hatch shape | **Co-located `<name>.tools.ts`** exporting tools via a typed `defineTool` helper. (Inline single-file block deferred.) | No embedded-TS parsing; full type-checking and IDE support for free. |
 | D4 | Compile target | **Emit readable `.ts`** (not a runtime AST interpreter). | Debuggable, reviewable, Svelte-like; the emitted code *is* the documentation. |
-| D5 | Runtime substrate | **`@anthropic-ai/sdk` directly**, wrapped by a thin `@toad/runtime`. Prompt caching on; latest Claude models; per the `claude-api` skill. **Not** the Agent SDK for MVP. | Minimal deps, full control of the tool loop, Anthropic-native. |
+| D5 | Runtime substrate | **`@anthropic-ai/sdk` directly**, wrapped by a thin `toad-runtime`. Prompt caching on; latest Claude models; per the `claude-api` skill. **Not** the Agent SDK for MVP. | Minimal deps, full control of the tool loop, Anthropic-native. |
 | D6 | Multi-line prompts | **`prompt: \|` block-scalar superset** (Toa-only). The preprocessor captures the indented block, dedents it, and lowers it to a TOON-escaped quoted string before `decode()` runs; `{ }` interpolation works inside it. | TOON has no block scalar and forces quoting on `:`/`{}`/`"`; escaped single-line prompts kill authorability. **Toa is a strict superset of TOON.** |
 
 ---
@@ -66,7 +66,7 @@ outputs[2]{name,type}:
 Co-located `researcher.tools.ts`:
 
 ```ts
-import { defineTool } from "@toad/runtime";
+import { defineTool } from "toad-runtime";
 import { z } from "zod";
 
 export const web_search = defineTool({
@@ -109,7 +109,7 @@ environment access). Unknown roots/paths are a **compile error**.
 
 ## 4. Functional requirements
 
-### Parser (`@toad/compiler`)
+### Parser (`toad-compiler`)
 - **FR1** Parse the TOON data subset used by `.agent`: `key: value`, nested
   objects, block scalars (`|`), inline primitive arrays (`name[N]:`), and tabular
   arrays (`name[N]{fields}:`), per TOON spec v3.2 quoting/escaping rules.
@@ -134,14 +134,14 @@ environment access). Unknown roots/paths are a **compile error**.
   agent (default export + named `<agent>`), with generated TS types for `inputs`
   and `outputs`.
 - **FR9** Emitted code imports tools from the co-located `.tools.ts` and the
-  agent loop from `@toad/runtime`; no logic is inlined that belongs in the runtime
+  agent loop from `toad-runtime`; no logic is inlined that belongs in the runtime
   (service-layer rule).
 - **FR10** Interpolations compile to template-literal substitutions over the typed
   `inputs` object — no runtime string-key lookups.
 - **FR11** Emitted code is formatted and stable (same input → byte-identical
   output) so diffs are meaningful.
 
-### Runtime (`@toad/runtime`)
+### Runtime (`toad-runtime`)
 - **FR12** `defineTool({ description, input: ZodSchema, run })` returns a typed tool;
   derives the Anthropic tool JSON schema from the Zod schema.
 - **FR13** Provide the agent execution loop over `@anthropic-ai/sdk`: send prompt
@@ -181,7 +181,7 @@ environment access). Unknown roots/paths are a **compile error**.
 
 > Detailed stories are produced in Solutioning. This is the sequencing skeleton.
 
-- **E0 — Repo scaffold.** pnpm + Turbo monorepo; `@toad/compiler`, `@toad/runtime`;
+- **E0 — Repo scaffold.** pnpm + Turbo monorepo; `toad-compiler`, `toad-runtime`;
   TS strict, Vitest, lint, CI. *(small)*
 - **E1 — Parser.** TOON-subset + interpolation tokenizer → AST + diagnostics
   (FR1–FR4). Conformance-test against fetched `toon-format/toon` fixtures. *(2–3 stories)*
@@ -213,7 +213,7 @@ parallel once the AST (E1) is stable.
 - Structured-output mechanism (FR14): Anthropic native structured outputs vs. a
   final tool-call vs. parse-from-text. Pick during architecture.
 - AST shape and the codegen template strategy (string templates vs. ts-morph).
-- Whether `@toad/runtime` and the `toac` bin live in one package or two.
+- Whether `toad-runtime` and the `toac` bin live in one package or two.
 
 ## 9. Out of scope (restated)
 

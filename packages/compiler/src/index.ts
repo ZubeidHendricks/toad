@@ -1,5 +1,5 @@
 /**
- * `@toad/compiler` — the `toac` compiler: `.agent` (a TOON superset) -> typed `.ts`.
+ * `toad-compiler` — the `toac` compiler: `.agent` (a TOON superset) -> typed `.ts`.
  * Pipeline: preprocess -> TOON decode -> validate -> codegen.
  * See `_bmad-output/architecture.md`.
  */

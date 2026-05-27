@@ -1,5 +1,5 @@
 {
-  "name": "@toad/runtime",
+  "name": "toad-runtime",
   "version": "0.1.0",
   "description": "Runtime for TOAD agents — the tool-use loop, structured output, and typed errors that compiled .agent modules run on, over the Anthropic API.",
   "keywords": [

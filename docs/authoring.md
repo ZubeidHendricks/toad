@@ -12,7 +12,7 @@ your.agent ──┐
              │  2. decode  parsed by the real @toon-format/toon decoder
              │  3. validate keys, types, tools, {inputs.x} → a typed agent model
              ▼  4. emit
-your.ts  ──▶ readable, typed TypeScript that runs on @toad/runtime over Claude
+your.ts  ──▶ readable, typed TypeScript that runs on toad-runtime over Claude
 ```
 
 You describe **what** the agent is (its model, inputs, tools, prompt, outputs).
@@ -100,7 +100,7 @@ Compile it with `toac build researcher.agent`. Tools named in `tools:` are
 implemented in a co-located `researcher.tools.ts`:
 
 ```ts
-import { defineTool } from "@toad/runtime";
+import { defineTool } from "toad-runtime";
 import { z } from "zod";
 
 export const web_search = defineTool({

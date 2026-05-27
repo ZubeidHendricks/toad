@@ -1,5 +1,5 @@
 /**
- * `@toad/runtime` — the runtime that agents compiled by `toac` import. Provides
+ * `toad-runtime` — the runtime that agents compiled by `toac` import. Provides
  * `defineTool`, `createAgent`, the tool loop, and typed errors.
  * See `_bmad-output/architecture.md` §6.
  */

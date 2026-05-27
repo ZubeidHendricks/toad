@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { compile, COMPILER_VERSION } from "./index.js";
 
-describe("@toad/compiler", () => {
+describe("toad-compiler", () => {
   it("exposes a version", () => {
     expect(COMPILER_VERSION).toBe("0.1.0");
   });

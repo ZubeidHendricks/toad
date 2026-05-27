@@ -1,7 +1,7 @@
 {
-  "name": "@toad/compiler",
+  "name": "toad-compiler",
   "version": "0.1.0",
-  "description": "The toac compiler for TOAD — turns a declarative .agent file (a TOON superset) into readable, fully-typed TypeScript that runs on @toad/runtime.",
+  "description": "The toac compiler for TOAD — turns a declarative .agent file (a TOON superset) into readable, fully-typed TypeScript that runs on toad-runtime.",
   "keywords": [
     "toad",
     "toac",

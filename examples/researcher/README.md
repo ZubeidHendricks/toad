@@ -13,11 +13,11 @@ A minimal Toa agent that researches a topic and returns a sourced summary.
 From the repo root:
 
 ```bash
-pnpm --filter @toad/compiler build
+pnpm --filter toad-compiler build
 node packages/compiler/dist/bin.js build examples/researcher/researcher.agent
 ```
 
-This regenerates `researcher.ts`. Then `pnpm --filter @toad/example-researcher typecheck`
+This regenerates `researcher.ts`. Then `pnpm --filter toad-example-researcher typecheck`
 confirms the generated agent + tools type-check.
 
 ## Run (needs an API key)
@@ -26,7 +26,7 @@ confirms the generated agent + tools type-check.
 it executes; without one it's skipped (so CI stays offline and free):
 
 ```bash
-ANTHROPIC_API_KEY=sk-... pnpm --filter @toad/example-researcher test
+ANTHROPIC_API_KEY=sk-... pnpm --filter toad-example-researcher test
 ```
 
 In code, the generated agent is just:

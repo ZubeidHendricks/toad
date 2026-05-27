@@ -1,5 +1,5 @@
 {
-  "name": "@toad/example-researcher",
+  "name": "toad-example-researcher",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,7 +8,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@toad/runtime": "workspace:*",
+    "toad-runtime": "workspace:*",
     "zod": "4.4.3"
   },
   "devDependencies": {
