@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Blog — TOAD</title>
+    <meta
+      name="description"
+      content="TOAD release notes and updates — what's new in the compiler, runtime, and language."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230a0f0d'/><circle cx='11' cy='13' r='3.2' fill='%234ade80'/><circle cx='21' cy='13' r='3.2' fill='%234ade80'/><path d='M8 20 q8 7 16 0' fill='none' stroke='%234ade80' stroke-width='2' stroke-linecap='round'/></svg>"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <header class="nav">
+      <a class="brand" href="../">
+        <img src="../toad_robo.png" alt="" width="26" height="26" />
+        <span>TOAD</span>
+      </a>
+      <nav>
+        <a href="../docs/">Docs</a>
+        <a href="../tutorial/">Tutorial</a>
+        <a href="../examples/">Examples</a>
+        <a href="../playground/">Playground</a>
+        <a class="active" href="./">Blog</a>
+        <a
+          class="nav-gh"
+          href="https://github.com/ZubeidHendricks/toad"
+          target="_blank"
+          rel="noreferrer"
+          >GitHub ↗</a
+        >
+      </nav>
+    </header>
+
+    <main>
+      <section class="page-head">
+        <p class="kicker">Blog</p>
+        <h1>Release notes</h1>
+        <p class="lead muted">
+          What's new in TOAD. Follow along on
+          <a
+            href="https://github.com/ZubeidHendricks/toad/releases"
+            target="_blank"
+            rel="noreferrer"
+            >GitHub releases</a
+          >.
+        </p>
+      </section>
+
+      <section class="blog-list">
+        <article class="post">
+          <header class="post-head">
+            <span class="post-tag">v0.1.0</span>
+            <time datetime="2026-05-27">May 27, 2026</time>
+          </header>
+          <h2>TOAD 0.1.0 — the first release</h2>
+          <p>
+            TOAD is now on npm. Write an AI agent as a tiny declarative
+            <code>.agent</code> file; the <code>toac</code> compiler turns it into
+            readable, fully-typed TypeScript that runs on Claude.
+          </p>
+          <pre><code>npm i -g toad-compiler
+npm i toad-runtime @anthropic-ai/sdk</code></pre>
+          <p><b>What's in it:</b></p>
+          <ul class="post-list">
+            <li>
+              <b>The compiler</b> — <code>.agent</code> (a strict
+              <a
+                href="https://github.com/toon-format/toon"
+                target="_blank"
+                rel="noreferrer"
+                >TOON</a
+              >
+              superset) lowered, decoded, validated, and emitted as typed
+              TypeScript, with located <code>file:line:col</code> diagnostics.
+            </li>
+            <li>
+              <b>The language</b> — typed <code>inputs</code> /
+              <code>outputs</code> / <code>tools</code>, object types,
+              interpolation, <code>{#each}</code> loops (with index,
+              <code>{:else}</code>, and destructuring), and
+              <code>{#if}/{:else if}/{:else}</code> conditionals.
+            </li>
+            <li>
+              <b>The runtime</b> — the tool-use loop, structured output,
+              composition (<code>uses:</code> / <code>asTool()</code>), lifecycle
+              (<code>retries</code>, <code>maxTurns</code>, hooks), and streaming.
+            </li>
+            <li>
+              <b>The site</b> — docs, a step-by-step tutorial, live examples, and
+              an in-browser playground running the real compiler.
+            </li>
+          </ul>
+          <p class="muted">
+            Two packages:
+            <a
+              href="https://www.npmjs.com/package/toad-compiler"
+              target="_blank"
+              rel="noreferrer"
+              ><code>toad-compiler</code></a
+            >
+            (the <code>toac</code> CLI) and
+            <a
+              href="https://www.npmjs.com/package/toad-runtime"
+              target="_blank"
+              rel="noreferrer"
+              ><code>toad-runtime</code></a
+            >. MIT-licensed. Issues and PRs welcome — it's early and there's plenty
+            to build.
+          </p>
+        </article>
+      </section>
+
+      <section class="page-cta">
+        <a class="btn primary" href="../tutorial/">Start the tutorial</a>
+        <a
+          class="btn"
+          href="https://github.com/ZubeidHendricks/toad"
+          target="_blank"
+          rel="noreferrer"
+          >Star on GitHub</a
+        >
+      </section>
+    </main>
+
+    <footer>
+      <span>TOAD — Token-Oriented Agentic Development</span>
+      <span class="dot">·</span>
+      <a
+        href="https://github.com/ZubeidHendricks/toad"
+        target="_blank"
+        rel="noreferrer"
+        >GitHub</a
+      >
+      <span class="dot">·</span>
+      <a
+        href="https://www.npmjs.com/package/toad-compiler"
+        target="_blank"
+        rel="noreferrer"
+        >npm</a
+      >
+      <span class="dot">·</span>
+      <span>MIT</span>
+    </footer>
+
+    <script type="module" src="../app.js"></script>
+  </body>
+</html>
