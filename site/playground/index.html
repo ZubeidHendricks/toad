@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Playground — TOAD</title>
+    <meta
+      name="description"
+      content="The TOAD playground — edit a .agent file and watch the real toac compiler emit typed TypeScript live, in your browser, with no server."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230a0f0d'/><circle cx='11' cy='13' r='3.2' fill='%234ade80'/><circle cx='21' cy='13' r='3.2' fill='%234ade80'/><path d='M8 20 q8 7 16 0' fill='none' stroke='%234ade80' stroke-width='2' stroke-linecap='round'/></svg>"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <header class="nav">
+      <a class="brand" href="../">
+        <img src="../toad_robo.png" alt="" width="26" height="26" />
+        <span>TOAD</span>
+      </a>
+      <nav>
+        <a href="../docs/">Docs</a>
+        <a href="../examples/">Examples</a>
+        <a class="active" href="./">Playground</a>
+        <a
+          class="nav-gh"
+          href="https://github.com/ZubeidHendricks/toad"
+          target="_blank"
+          rel="noreferrer"
+          >GitHub ↗</a
+        >
+      </nav>
+    </header>
+
+    <main>
+      <section class="page-head">
+        <p class="kicker">Playground</p>
+        <h1>It compiles in your browser.</h1>
+        <p class="lead muted">
+          Edit the agent on the left — it compiles live, with the real
+          <code>toac</code> compiler bundled to the page. No server. New to the
+          syntax? Start from the <a href="../docs/">docs</a>.
+        </p>
+      </section>
+
+      <section class="playground-page">
+        <div class="presets">
+          <span class="muted">Examples:</span>
+          <button type="button" class="chip" data-preset="researcher">
+            researcher
+          </button>
+          <button type="button" class="chip" data-preset="summarizer">
+            summarizer
+          </button>
+          <button type="button" class="chip" data-preset="digest">
+            digest ({#each})
+          </button>
+          <button type="button" class="chip" data-preset="report">
+            report ({#if})
+          </button>
+          <button type="button" class="chip" data-preset="brief">
+            brief (kitchen sink)
+          </button>
+        </div>
+        <div class="pg">
+          <div class="pane">
+            <div class="pane-head">input.agent</div>
+            <textarea id="pg-input" spellcheck="false" autocapitalize="off"></textarea>
+          </div>
+          <div class="arrow" aria-hidden="true">→</div>
+          <div class="pane">
+            <div class="pane-head">output.ts</div>
+            <pre><code id="pg-output"></code></pre>
+          </div>
+        </div>
+        <p id="pg-status" class="pg-status"></p>
+      </section>
+    </main>
+
+    <footer>
+      <span>TOAD — Token-Oriented Agentic Development</span>
+      <span class="dot">·</span>
+      <a
+        href="https://github.com/ZubeidHendricks/toad"
+        target="_blank"
+        rel="noreferrer"
+        >GitHub</a
+      >
+      <span class="dot">·</span>
+      <a
+        href="https://www.npmjs.com/package/toad-compiler"
+        target="_blank"
+        rel="noreferrer"
+        >npm</a
+      >
+      <span class="dot">·</span>
+      <span>MIT</span>
+    </footer>
+
+    <script type="module" src="../app.js"></script>
+  </body>
+</html>

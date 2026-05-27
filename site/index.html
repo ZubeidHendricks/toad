@@ -35,16 +35,14 @@
     </a>
 
     <header class="nav">
-      <a class="brand" href="#top">
+      <a class="brand" href="./">
         <img src="toad_robo.png" alt="" width="26" height="26" />
         <span>TOAD</span>
       </a>
       <nav>
-        <a href="#showcase">Example</a>
-        <a href="#features">Why</a>
-        <a href="#language">Language</a>
-        <a href="#playground">Playground</a>
-        <a href="#community">Community</a>
+        <a href="docs/">Docs</a>
+        <a href="examples/">Examples</a>
+        <a href="playground/">Playground</a>
         <a
           class="nav-gh"
           href="https://github.com/ZubeidHendricks/toad"
@@ -76,14 +74,8 @@
           <em>and</em> LLMs can author it.
         </p>
         <div class="cta">
-          <a class="btn primary" href="#playground">Try the playground</a>
-          <a
-            class="btn"
-            href="https://github.com/ZubeidHendricks/toad"
-            target="_blank"
-            rel="noreferrer"
-            >View on GitHub</a
-          >
+          <a class="btn primary" href="playground/">Try the playground</a>
+          <a class="btn" href="docs/">Read the docs</a>
         </div>
         <p class="badges">
           <a
@@ -140,6 +132,9 @@
             <pre><code id="src-ts"></code></pre>
           </div>
         </div>
+        <p class="showcase-cta">
+          <a href="examples/">See more examples →</a>
+        </p>
       </section>
 
       <section id="features" class="features">
@@ -191,127 +186,6 @@
         </div>
       </section>
 
-      <section id="language" class="language">
-        <p class="kicker">One small language</p>
-        <h2>Loops, conditionals, and types — all checked.</h2>
-        <p class="muted lead">
-          Interpolation, <code>{#each}</code>, <code>{#if}</code>, object fields,
-          and environment values are validated against the agent's typed inputs,
-          with located <code>file:line:col</code> diagnostics. A kitchen-sink
-          agent:
-        </p>
-        <pre><code id="lang-example"></code></pre>
-      </section>
-
-      <section id="how" class="how">
-        <p class="kicker">How it works</p>
-        <h2>Four steps from file to types.</h2>
-        <ol class="steps">
-          <li>
-            <b>Write</b> a declarative <code>.agent</code> file in TOON-derived
-            syntax.
-          </li>
-          <li>
-            <b>Lower</b> — <code>toac</code> turns <code>prompt: |</code> blocks
-            into valid TOON, then parses with the real TOON decoder.
-          </li>
-          <li>
-            <b>Validate</b> — keys, types, tools, and <code>{inputs.x}</code>
-            references become a typed agent model.
-          </li>
-          <li>
-            <b>Emit</b> — readable, typed TypeScript that runs on
-            <code>toad-runtime</code> over the Anthropic API.
-          </li>
-        </ol>
-        <div class="runtime-grid">
-          <div>
-            <b>Structured output</b><span
-              >declared <code>outputs</code> become a typed, validated
-              result.</span
-            >
-          </div>
-          <div>
-            <b>Composition</b><span
-              >use one agent as another's tool via <code>uses:</code> or
-              <code>asTool()</code>.</span
-            >
-          </div>
-          <div>
-            <b>Lifecycle</b><span
-              ><code>retries</code>, <code>maxTurns</code>, and tool
-              hooks.</span
-            >
-          </div>
-          <div>
-            <b>Streaming</b><span
-              ><code>agent.stream(inputs)</code> yields text deltas.</span
-            >
-          </div>
-        </div>
-      </section>
-
-      <section id="ai" class="ai">
-        <p class="kicker">Write agents with AI</p>
-        <h2>The syntax is small enough for an LLM to author.</h2>
-        <p class="muted lead">
-          Copy this prompt into Claude, describe your agent, and paste the result
-          into the playground below.
-        </p>
-        <div class="prompt-box">
-          <button id="copy-prompt" class="btn">Copy prompt</button>
-          <pre><code id="ai-prompt"></code></pre>
-        </div>
-        <p class="muted">
-          Full format reference:
-          <a
-            href="https://github.com/ZubeidHendricks/toad/blob/main/docs/authoring.md"
-            target="_blank"
-            rel="noreferrer"
-            >docs/authoring.md</a
-          >.
-        </p>
-      </section>
-
-      <section id="playground" class="playground">
-        <p class="kicker">Playground</p>
-        <h2>It compiles in your browser.</h2>
-        <p class="muted lead">
-          Edit the agent on the left — it compiles live, with the real
-          <code>toac</code> compiler bundled to the page. No server.
-        </p>
-        <div class="presets">
-          <span class="muted">Examples:</span>
-          <button type="button" class="chip" data-preset="researcher">
-            researcher
-          </button>
-          <button type="button" class="chip" data-preset="summarizer">
-            summarizer
-          </button>
-          <button type="button" class="chip" data-preset="digest">
-            digest ({#each})
-          </button>
-          <button type="button" class="chip" data-preset="report">
-            report ({#if})
-          </button>
-          <button type="button" class="chip" data-preset="brief">
-            brief (kitchen sink)
-          </button>
-        </div>
-        <div class="pg">
-          <div class="pane">
-            <div class="pane-head">input.agent</div>
-            <textarea id="pg-input" spellcheck="false" autocapitalize="off"></textarea>
-          </div>
-          <div class="arrow" aria-hidden="true">→</div>
-          <div class="pane">
-            <div class="pane-head">output.ts</div>
-            <pre><code id="pg-output"></code></pre>
-          </div>
-        </div>
-        <p id="pg-status" class="pg-status"></p>
-      </section>
-
       <section id="community" class="community">
         <p class="kicker">Community</p>
         <h2>It's open source — come build it.</h2>
@@ -319,14 +193,6 @@
           TOAD is MIT-licensed and early. Star it, file an issue, or send a PR —
           the compiler, runtime, language features, and docs are all fair game.
         </p>
-        <div class="quickstart-inline">
-          <pre><code># install the compiler (the `toac` CLI) + runtime
-npm i -g toad-compiler
-npm i toad-runtime @anthropic-ai/sdk
-
-# compile an agent to typed TypeScript
-toac build researcher.agent</code></pre>
-        </div>
         <div class="cta">
           <a
             class="btn primary"
@@ -342,13 +208,7 @@ toac build researcher.agent</code></pre>
             rel="noreferrer"
             >Open an issue</a
           >
-          <a
-            class="btn"
-            href="https://github.com/ZubeidHendricks/toad/blob/main/docs/authoring.md"
-            target="_blank"
-            rel="noreferrer"
-            >Read the docs</a
-          >
+          <a class="btn" href="docs/">Read the docs</a>
         </div>
         <a
           class="contributors"

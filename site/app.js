@@ -1,5 +1,7 @@
-// TOAD site. The showcase and playground both run the real `toac` compiler,
-// bundled to a browser ESM (`toad-compiler.js`) by `pnpm build:site`.
+// TOAD site (multi-page). One module shared by every page; it fills whichever
+// hooks are present on the current page and no-ops for the rest. The showcase,
+// examples, and playground all run the real `toac` compiler, bundled to a
+// browser ESM (`toad-compiler.js`) by `pnpm build:site`.
 
 const AGENT_SRC = `agent: researcher
 model: claude-opus-4-7
@@ -86,6 +88,7 @@ const setText = (id, text) => {
   if (el) el.textContent = text;
 };
 
+// Static (no-compiler) hooks, safe to set on any page.
 setText("src-agent", AGENT_SRC);
 setText("lang-example", PRESETS.brief);
 
@@ -94,6 +97,8 @@ setText("lang-example", PRESETS.brief);
 let compile = null;
 let formatDiagnostic = null;
 try {
+  // app.js always lives at the site root, so this specifier (resolved relative
+  // to app.js, not the page) points at the bundle from every page.
   const mod = await import("./toad-compiler.js");
   compile = mod.compile;
   formatDiagnostic = mod.formatDiagnostic;
@@ -101,30 +106,52 @@ try {
   console.error("TOAD: compiler bundle failed to load", err);
 }
 
-function renderResult(targetId, source) {
+function compileText(source) {
   const { code, diagnostics } = compile(source, "agent.agent");
   if (code !== undefined && diagnostics.length === 0) {
-    setText(targetId, code);
-    return { ok: true, count: 0 };
+    return { text: code, ok: true, count: 0 };
   }
   const text = diagnostics
     .map((d) => (formatDiagnostic ? formatDiagnostic(d) : `${d.code}: ${d.message}`))
     .join("\n");
-  setText(targetId, text || "// no output");
-  return { ok: false, count: diagnostics.length };
+  return { text: text || "// no output", ok: false, count: diagnostics.length };
 }
 
-if (compile) {
-  // Showcase: compile the canonical example.
-  renderResult("src-ts", AGENT_SRC);
+function renderInto(el, source) {
+  const res = compileText(source);
+  el.textContent = res.text;
+  return res;
+}
 
-  // Playground: live recompile on input.
-  const input = $("pg-input");
+const UNAVAILABLE = "// compiler bundle unavailable — run `pnpm build:site`";
+
+// Showcase (home): compile the canonical example into #src-ts.
+const srcTs = $("src-ts");
+if (srcTs) srcTs.textContent = compile ? compileText(AGENT_SRC).text : UNAVAILABLE;
+
+// Examples page: <code data-ex="researcher" data-part="src|ts">.
+document.querySelectorAll("[data-ex]").forEach((el) => {
+  const key = el.getAttribute("data-ex");
+  const part = el.getAttribute("data-part");
+  const src = PRESETS[key];
+  if (!src) return;
+  if (part === "ts") {
+    el.textContent = compile ? compileText(src).text : UNAVAILABLE;
+  } else {
+    el.textContent = src;
+  }
+});
+
+// Playground: live recompile on input.
+const input = $("pg-input");
+if (input) {
   const status = $("pg-status");
-  if (input) {
+  if (compile) {
     input.value = AGENT_SRC;
     const run = () => {
-      const res = renderResult("pg-output", input.value);
+      const out = $("pg-output");
+      if (!out) return;
+      const res = renderInto(out, input.value);
       if (status) {
         status.textContent = res.ok ? "✓ compiled" : `✗ ${res.count} error(s)`;
         status.className = "pg-status " + (res.ok ? "ok" : "err");
@@ -146,21 +173,15 @@ if (compile) {
         }
       });
     });
-  }
-} else {
-  const note = "// compiler bundle unavailable — run `pnpm build:site`";
-  setText("src-ts", note);
-  setText("pg-output", note);
-  const input = $("pg-input");
-  if (input) {
+  } else {
     input.value = AGENT_SRC;
     input.setAttribute("disabled", "true");
+    setText("pg-output", UNAVAILABLE);
+    if (status) status.textContent = "Playground unavailable.";
   }
-  const status = $("pg-status");
-  if (status) status.textContent = "Playground unavailable.";
 }
 
-// "Write agents with AI": the copy-paste authoring prompt.
+// "Write agents with AI": the copy-paste authoring prompt (docs page).
 const PROMPT = `You write TOAD agent files. TOAD is a compile-first framework: an agent is a
 declarative .agent file that a compiler turns into typed TypeScript. Given a
 task, output ONE valid .agent file and nothing else — no prose, no code fences.

@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Examples — TOAD</title>
+    <meta
+      name="description"
+      content="Example TOAD agents — each .agent file compiled live to typed TypeScript, covering tools, structured output, loops, conditionals, and object types."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230a0f0d'/><circle cx='11' cy='13' r='3.2' fill='%234ade80'/><circle cx='21' cy='13' r='3.2' fill='%234ade80'/><path d='M8 20 q8 7 16 0' fill='none' stroke='%234ade80' stroke-width='2' stroke-linecap='round'/></svg>"
+    />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <header class="nav">
+      <a class="brand" href="../">
+        <img src="../toad_robo.png" alt="" width="26" height="26" />
+        <span>TOAD</span>
+      </a>
+      <nav>
+        <a href="../docs/">Docs</a>
+        <a class="active" href="./">Examples</a>
+        <a href="../playground/">Playground</a>
+        <a
+          class="nav-gh"
+          href="https://github.com/ZubeidHendricks/toad"
+          target="_blank"
+          rel="noreferrer"
+          >GitHub ↗</a
+        >
+      </nav>
+    </header>
+
+    <main>
+      <section class="page-head">
+        <p class="kicker">Examples</p>
+        <h1>Agents, compiled in your browser.</h1>
+        <p class="lead muted">
+          Each agent below is the real <code>.agent</code> source on the left and
+          the <code>toac</code> output on the right — compiled live by the
+          in-page compiler. Open any of them in the
+          <a href="../playground/">playground</a> to edit.
+        </p>
+      </section>
+
+      <section class="examples-list">
+        <article class="example">
+          <h3>researcher <span class="muted">— tools + structured output</span></h3>
+          <div class="showcase">
+            <div class="pane">
+              <div class="pane-head">researcher.agent</div>
+              <pre><code data-ex="researcher" data-part="src"></code></pre>
+            </div>
+            <div class="arrow" aria-hidden="true">→</div>
+            <div class="pane">
+              <div class="pane-head">
+                researcher.ts <span class="tag">generated</span>
+              </div>
+              <pre><code data-ex="researcher" data-part="ts"></code></pre>
+            </div>
+          </div>
+        </article>
+
+        <article class="example">
+          <h3>summarizer <span class="muted">— typed array output</span></h3>
+          <div class="showcase">
+            <div class="pane">
+              <div class="pane-head">summarizer.agent</div>
+              <pre><code data-ex="summarizer" data-part="src"></code></pre>
+            </div>
+            <div class="arrow" aria-hidden="true">→</div>
+            <div class="pane">
+              <div class="pane-head">
+                summarizer.ts <span class="tag">generated</span>
+              </div>
+              <pre><code data-ex="summarizer" data-part="ts"></code></pre>
+            </div>
+          </div>
+        </article>
+
+        <article class="example">
+          <h3>digest <span class="muted">— {#each} loop with index</span></h3>
+          <div class="showcase">
+            <div class="pane">
+              <div class="pane-head">digest.agent</div>
+              <pre><code data-ex="digest" data-part="src"></code></pre>
+            </div>
+            <div class="arrow" aria-hidden="true">→</div>
+            <div class="pane">
+              <div class="pane-head">
+                digest.ts <span class="tag">generated</span>
+              </div>
+              <pre><code data-ex="digest" data-part="ts"></code></pre>
+            </div>
+          </div>
+        </article>
+
+        <article class="example">
+          <h3>report <span class="muted">— {#each} + {#if} conditional</span></h3>
+          <div class="showcase">
+            <div class="pane">
+              <div class="pane-head">report.agent</div>
+              <pre><code data-ex="report" data-part="src"></code></pre>
+            </div>
+            <div class="arrow" aria-hidden="true">→</div>
+            <div class="pane">
+              <div class="pane-head">
+                report.ts <span class="tag">generated</span>
+              </div>
+              <pre><code data-ex="report" data-part="ts"></code></pre>
+            </div>
+          </div>
+        </article>
+
+        <article class="example">
+          <h3>brief <span class="muted">— object types, destructuring, kitchen sink</span></h3>
+          <div class="showcase">
+            <div class="pane">
+              <div class="pane-head">brief.agent</div>
+              <pre><code data-ex="brief" data-part="src"></code></pre>
+            </div>
+            <div class="arrow" aria-hidden="true">→</div>
+            <div class="pane">
+              <div class="pane-head">
+                brief.ts <span class="tag">generated</span>
+              </div>
+              <pre><code data-ex="brief" data-part="ts"></code></pre>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="page-cta">
+        <a class="btn primary" href="../playground/">Open the playground</a>
+        <a class="btn" href="../docs/">Read the docs</a>
+      </section>
+    </main>
+
+    <footer>
+      <span>TOAD — Token-Oriented Agentic Development</span>
+      <span class="dot">·</span>
+      <a
+        href="https://github.com/ZubeidHendricks/toad"
+        target="_blank"
+        rel="noreferrer"
+        >GitHub</a
+      >
+      <span class="dot">·</span>
+      <a
+        href="https://www.npmjs.com/package/toad-compiler"
+        target="_blank"
+        rel="noreferrer"
+        >npm</a
+      >
+      <span class="dot">·</span>
+      <span>MIT</span>
+    </footer>
+
+    <script type="module" src="../app.js"></script>
+  </body>
+</html>
