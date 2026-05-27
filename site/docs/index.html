@@ -69,12 +69,15 @@
         </p>
 
         <h2 id="how">How it works</h2>
-        <pre class="flow"><code>your.agent ──┐
-             │  1. lower    prompt: | blocks become valid TOON      (toac)
-             │  2. decode   parsed by the real @toon-format/toon decoder
-             │  3. validate keys, types, tools, {inputs.x} → typed model
-             ▼  4. emit
-your.ts  ──▶ readable, typed TypeScript that runs on toad-runtime</code></pre>
+        <pre class="mermaid">
+flowchart TD
+  A["your.agent"]:::file --> S1["1 · lower&lt;br/&gt;prompt: | blocks become valid TOON"]
+  S1 --> S2["2 · decode&lt;br/&gt;parsed by the real @toon-format/toon decoder"]
+  S2 --> S3["3 · validate&lt;br/&gt;keys, types, tools, inputs.x refs → a typed agent model"]
+  S3 --> S4["4 · emit"]
+  S4 --> B["your.ts&lt;br/&gt;readable, typed TypeScript on toad-runtime, over Claude"]:::file
+  classDef file fill:#0c1411,stroke:#4ade80,color:#b8f3cf,stroke-width:1.5px;
+</pre>
         <p class="muted">
           Real logic (what a tool actually does) lives in plain TypeScript, in a
           co-located <code>&lt;agent&gt;.tools.ts</code>.
@@ -307,5 +310,30 @@ prompt: |
     </footer>
 
     <script type="module" src="../app.js"></script>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "loose",
+        theme: "base",
+        themeVariables: {
+          background: "#0f1714",
+          primaryColor: "#0f1714",
+          secondaryColor: "#0c1411",
+          tertiaryColor: "#0c1411",
+          primaryBorderColor: "#2c4a3b",
+          primaryTextColor: "#dce5e0",
+          lineColor: "#4ade80",
+          fontFamily:
+            "ui-monospace, SF Mono, JetBrains Mono, Menlo, Consolas, monospace",
+          fontSize: "14px",
+        },
+      });
+      try {
+        await mermaid.run();
+      } catch (err) {
+        console.error("mermaid render failed", err);
+      }
+    </script>
   </body>
 </html>

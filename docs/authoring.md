@@ -6,13 +6,13 @@ at the bottom).
 
 ## How TOAD works
 
-```
-your.agent ──┐
-             │  1. lower   `prompt: |` blocks become valid TOON      (toac)
-             │  2. decode  parsed by the real @toon-format/toon decoder
-             │  3. validate keys, types, tools, {inputs.x} → a typed agent model
-             ▼  4. emit
-your.ts  ──▶ readable, typed TypeScript that runs on toad-runtime over Claude
+```mermaid
+flowchart TD
+  A["your.agent"] --> S1["1 · lower<br/>prompt: | blocks become valid TOON"]
+  S1 --> S2["2 · decode<br/>parsed by the real @toon-format/toon decoder"]
+  S2 --> S3["3 · validate<br/>keys, types, tools, inputs.x refs → a typed agent model"]
+  S3 --> S4["4 · emit"]
+  S4 --> B["your.ts<br/>readable, typed TypeScript that runs on toad-runtime, over Claude"]
 ```
 
 You describe **what** the agent is (its model, inputs, tools, prompt, outputs).

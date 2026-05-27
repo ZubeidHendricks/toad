@@ -639,6 +639,28 @@ footer {
   color: var(--muted);
 }
 
+/* Mermaid diagrams */
+.mermaid {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 26px 18px;
+  margin: 16px 0;
+  text-align: center;
+  overflow-x: auto;
+  /* hide the raw source until mermaid swaps in the SVG */
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+}
+.mermaid[data-processed] {
+  color: var(--text);
+}
+.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
 /* Tables */
 .table-wrap {
   overflow-x: auto;
