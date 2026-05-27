@@ -227,11 +227,12 @@
 
       <section class="quickstart">
         <h2>Quick start</h2>
-        <pre><code>git clone https://github.com/ZubeidHendricks/toad
-cd toad &amp;&amp; pnpm install
+        <pre><code># install the compiler (the `toac` CLI) + runtime
+npm i -g toad-compiler
+npm i toad-runtime @anthropic-ai/sdk
 
 # compile an agent to typed TypeScript
-node packages/compiler/dist/bin.js build examples/researcher/researcher.agent</code></pre>
+toac build researcher.agent</code></pre>
       </section>
     </main>
 

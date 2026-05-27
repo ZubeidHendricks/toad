@@ -81,6 +81,25 @@ The generated agent runs a tool-use loop over the Anthropic API with:
 - **`toad-compiler`** — the `toac` compiler (`.agent` → `.ts`).
 - **`toad-runtime`** — `defineTool`, `createAgent`, the tool loop, and the above.
 
+## Install
+
+```bash
+# the compiler + `toac` CLI
+npm i -g toad-compiler
+
+# the runtime your compiled agents import
+npm i toad-runtime @anthropic-ai/sdk
+```
+
+Compile an agent to typed TypeScript:
+
+```bash
+toac build researcher.agent
+```
+
+[![npm](https://img.shields.io/npm/v/toad-compiler?label=toad-compiler)](https://www.npmjs.com/package/toad-compiler)
+[![npm](https://img.shields.io/npm/v/toad-runtime?label=toad-runtime)](https://www.npmjs.com/package/toad-runtime)
+
 ## Develop
 
 ```bash
