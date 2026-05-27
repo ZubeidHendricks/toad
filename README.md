@@ -97,8 +97,10 @@ Compile an agent to typed TypeScript:
 toac build researcher.agent
 ```
 
-[![npm](https://img.shields.io/npm/v/toad-compiler?label=toad-compiler)](https://www.npmjs.com/package/toad-compiler)
-[![npm](https://img.shields.io/npm/v/toad-runtime?label=toad-runtime)](https://www.npmjs.com/package/toad-runtime)
+[![toad-compiler version](https://img.shields.io/npm/v/toad-compiler?label=toad-compiler)](https://www.npmjs.com/package/toad-compiler)
+[![toad-compiler downloads](https://img.shields.io/npm/dt/toad-compiler?label=downloads)](https://www.npmjs.com/package/toad-compiler)
+[![toad-runtime version](https://img.shields.io/npm/v/toad-runtime?label=toad-runtime)](https://www.npmjs.com/package/toad-runtime)
+[![toad-runtime downloads](https://img.shields.io/npm/dt/toad-runtime?label=downloads)](https://www.npmjs.com/package/toad-runtime)
 
 ## Develop
 
