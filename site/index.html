@@ -8,6 +8,11 @@
       name="description"
       content="TOAD (Token-Oriented Agentic Development) is a compile-first framework for building AI agents. Write an agent as a tiny declarative file; the toac compiler emits typed TypeScript that runs on Claude."
     />
+    <meta property="og:title" content="TOAD — Token-Oriented Agentic Development" />
+    <meta
+      property="og:description"
+      content="Write an AI agent as a tiny declarative .agent file; a compiler emits readable, typed TypeScript that runs on Claude."
+    />
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230a0f0d'/><circle cx='11' cy='13' r='3.2' fill='%234ade80'/><circle cx='21' cy='13' r='3.2' fill='%234ade80'/><path d='M8 20 q8 7 16 0' fill='none' stroke='%234ade80' stroke-width='2' stroke-linecap='round'/></svg>"
@@ -15,25 +20,45 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <a
+      class="announce"
+      href="https://www.npmjs.com/package/toad-compiler"
+      target="_blank"
+      rel="noreferrer"
+    >
+      <span class="announce-tag">new</span>
+      <span
+        ><b>TOAD v0.1.0</b> is on npm —
+        <code>npm i -g toad-compiler</code></span
+      >
+      <span class="announce-arrow" aria-hidden="true">→</span>
+    </a>
+
     <header class="nav">
-      <a class="brand" href="#top">TOAD</a>
+      <a class="brand" href="#top">
+        <img src="toad_robo.png" alt="" width="26" height="26" />
+        <span>TOAD</span>
+      </a>
       <nav>
         <a href="#showcase">Example</a>
+        <a href="#features">Why</a>
         <a href="#language">Language</a>
-        <a href="#features">Features</a>
         <a href="#playground">Playground</a>
+        <a href="#community">Community</a>
         <a
+          class="nav-gh"
           href="https://github.com/ZubeidHendricks/toad"
           target="_blank"
           rel="noreferrer"
-          >GitHub</a
+          >GitHub ↗</a
         >
       </nav>
     </header>
 
     <main id="top">
       <section class="hero">
-        <img class="logo" src="toad_robo.png" alt="TOAD" width="112" height="112" />
+        <div class="hero-glow" aria-hidden="true"></div>
+        <img class="logo" src="toad_robo.png" alt="TOAD" width="120" height="120" />
         <p class="eyebrow">
           <b>T</b>oken-<b>O</b>riented <b>A</b>gentic <b>D</b>evelopment
         </p>
@@ -86,42 +111,40 @@
               src="https://img.shields.io/npm/v/toad-runtime?color=4ade80&label=toad-runtime&logo=npm&logoColor=white"
           /></a>
           <a
-            href="https://www.npmjs.com/package/toad-runtime"
+            href="https://github.com/ZubeidHendricks/toad"
             target="_blank"
             rel="noreferrer"
             ><img
-              alt="toad-runtime downloads"
-              src="https://img.shields.io/npm/dt/toad-runtime?color=22313a&label=downloads&logo=npm&logoColor=white"
+              alt="GitHub stars"
+              src="https://img.shields.io/github/stars/ZubeidHendricks/toad?color=4ade80&logo=github&logoColor=white&label=stars"
           /></a>
         </p>
-        <p class="sub">
-          A strict superset of
-          <a
-            href="https://github.com/toon-format/toon"
-            target="_blank"
-            rel="noreferrer"
-            >TOON</a
-          >
-          · TypeScript end-to-end · MIT
+        <p class="pronounce">
+          <span>/toʊd/</span> — you write <em>what</em> the agent is; the compiler
+          writes <em>how</em>.
         </p>
       </section>
 
-      <section id="showcase" class="showcase">
-        <div class="pane">
-          <div class="pane-head">researcher.agent</div>
-          <pre><code id="src-agent"></code></pre>
-        </div>
-        <div class="arrow" aria-hidden="true">→</div>
-        <div class="pane">
-          <div class="pane-head">
-            researcher.ts <span class="tag">generated</span>
+      <section id="showcase" class="showcase-wrap">
+        <p class="kicker">The whole idea, in one screen</p>
+        <div class="showcase">
+          <div class="pane">
+            <div class="pane-head">researcher.agent</div>
+            <pre><code id="src-agent"></code></pre>
           </div>
-          <pre><code id="src-ts"></code></pre>
+          <div class="arrow" aria-hidden="true">→</div>
+          <div class="pane">
+            <div class="pane-head">
+              researcher.ts <span class="tag">generated</span>
+            </div>
+            <pre><code id="src-ts"></code></pre>
+          </div>
         </div>
       </section>
 
       <section id="features" class="features">
-        <h2>Why TOAD</h2>
+        <p class="kicker">Why TOAD</p>
+        <h2>A framework, not a wrapper.</h2>
         <div class="grid">
           <article class="card">
             <h3>Token-efficient</h3>
@@ -169,16 +192,20 @@
       </section>
 
       <section id="language" class="language">
-        <h2>One small language</h2>
-        <p class="muted">
-          Loops, conditionals, object fields, and interpolation — all type-checked
-          against the agent's typed inputs. A kitchen-sink agent:
+        <p class="kicker">One small language</p>
+        <h2>Loops, conditionals, and types — all checked.</h2>
+        <p class="muted lead">
+          Interpolation, <code>{#each}</code>, <code>{#if}</code>, object fields,
+          and environment values are validated against the agent's typed inputs,
+          with located <code>file:line:col</code> diagnostics. A kitchen-sink
+          agent:
         </p>
         <pre><code id="lang-example"></code></pre>
       </section>
 
       <section id="how" class="how">
-        <h2>How it works</h2>
+        <p class="kicker">How it works</p>
+        <h2>Four steps from file to types.</h2>
         <ol class="steps">
           <li>
             <b>Write</b> a declarative <code>.agent</code> file in TOON-derived
@@ -197,14 +224,39 @@
             <code>toad-runtime</code> over the Anthropic API.
           </li>
         </ol>
+        <div class="runtime-grid">
+          <div>
+            <b>Structured output</b><span
+              >declared <code>outputs</code> become a typed, validated
+              result.</span
+            >
+          </div>
+          <div>
+            <b>Composition</b><span
+              >use one agent as another's tool via <code>uses:</code> or
+              <code>asTool()</code>.</span
+            >
+          </div>
+          <div>
+            <b>Lifecycle</b><span
+              ><code>retries</code>, <code>maxTurns</code>, and tool
+              hooks.</span
+            >
+          </div>
+          <div>
+            <b>Streaming</b><span
+              ><code>agent.stream(inputs)</code> yields text deltas.</span
+            >
+          </div>
+        </div>
       </section>
 
       <section id="ai" class="ai">
-        <h2>Write agents with AI</h2>
-        <p class="muted">
-          TOAD's syntax is small and explicit on purpose — so an LLM can author
-          it. Copy this prompt into Claude, describe your agent, and paste the
-          result into the playground below.
+        <p class="kicker">Write agents with AI</p>
+        <h2>The syntax is small enough for an LLM to author.</h2>
+        <p class="muted lead">
+          Copy this prompt into Claude, describe your agent, and paste the result
+          into the playground below.
         </p>
         <div class="prompt-box">
           <button id="copy-prompt" class="btn">Copy prompt</button>
@@ -222,10 +274,11 @@
       </section>
 
       <section id="playground" class="playground">
-        <h2>Playground</h2>
-        <p class="muted">
-          Edit the agent on the left — it compiles in your browser, live, with
-          the real <code>toac</code> compiler.
+        <p class="kicker">Playground</p>
+        <h2>It compiles in your browser.</h2>
+        <p class="muted lead">
+          Edit the agent on the left — it compiles live, with the real
+          <code>toac</code> compiler bundled to the page. No server.
         </p>
         <div class="presets">
           <span class="muted">Examples:</span>
@@ -259,14 +312,57 @@
         <p id="pg-status" class="pg-status"></p>
       </section>
 
-      <section class="quickstart">
-        <h2>Quick start</h2>
-        <pre><code># install the compiler (the `toac` CLI) + runtime
+      <section id="community" class="community">
+        <p class="kicker">Community</p>
+        <h2>It's open source — come build it.</h2>
+        <p class="muted lead">
+          TOAD is MIT-licensed and early. Star it, file an issue, or send a PR —
+          the compiler, runtime, language features, and docs are all fair game.
+        </p>
+        <div class="quickstart-inline">
+          <pre><code># install the compiler (the `toac` CLI) + runtime
 npm i -g toad-compiler
 npm i toad-runtime @anthropic-ai/sdk
 
 # compile an agent to typed TypeScript
 toac build researcher.agent</code></pre>
+        </div>
+        <div class="cta">
+          <a
+            class="btn primary"
+            href="https://github.com/ZubeidHendricks/toad"
+            target="_blank"
+            rel="noreferrer"
+            >Star on GitHub</a
+          >
+          <a
+            class="btn"
+            href="https://github.com/ZubeidHendricks/toad/issues/new"
+            target="_blank"
+            rel="noreferrer"
+            >Open an issue</a
+          >
+          <a
+            class="btn"
+            href="https://github.com/ZubeidHendricks/toad/blob/main/docs/authoring.md"
+            target="_blank"
+            rel="noreferrer"
+            >Read the docs</a
+          >
+        </div>
+        <a
+          class="contributors"
+          href="https://github.com/ZubeidHendricks/toad/graphs/contributors"
+          target="_blank"
+          rel="noreferrer"
+          title="Contributors"
+        >
+          <img
+            src="https://contrib.rocks/image?repo=ZubeidHendricks/toad"
+            alt="TOAD contributors"
+            loading="lazy"
+          />
+        </a>
       </section>
     </main>
 
@@ -278,6 +374,13 @@ toac build researcher.agent</code></pre>
         target="_blank"
         rel="noreferrer"
         >GitHub</a
+      >
+      <span class="dot">·</span>
+      <a
+        href="https://www.npmjs.com/package/toad-compiler"
+        target="_blank"
+        rel="noreferrer"
+        >npm</a
       >
       <span class="dot">·</span>
       <span>MIT</span>
