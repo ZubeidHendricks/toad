@@ -252,6 +252,16 @@ flowchart TD
             >
           </div>
         </div>
+        <p class="muted">The tool-use loop, end to end:</p>
+        <pre class="mermaid">
+flowchart TD
+  I["inputs (typed)"]:::file --> M["call Claude&lt;br/&gt;system + prompt"]
+  M --> Q{"wants a tool?"}
+  Q -->|yes| T["run the tool&lt;br/&gt;your .tools.ts"]
+  T --> M
+  Q -->|no| O["validate against outputs&lt;br/&gt;→ typed result"]:::file
+  classDef file fill:#0c1411,stroke:#4ade80,color:#b8f3cf,stroke-width:1.5px;
+</pre>
 
         <h2 id="composition">Composition</h2>
         <p>
@@ -266,6 +276,14 @@ model: claude-opus-4-7
 uses[1]: researcher
 prompt: |
   Plan an article. Use the researcher tool to gather sources first.</code></pre>
+        <pre class="mermaid">
+flowchart TD
+  P["planner agent"]:::file -->|"uses: researcher"| R["researcher.asTool()&lt;br/&gt;typed inputSchema"]
+  R --> L["researcher runs its&lt;br/&gt;own tool-use loop"]
+  L --> O["typed result&lt;br/&gt;returned to planner"]
+  O --> P
+  classDef file fill:#0c1411,stroke:#4ade80,color:#b8f3cf,stroke-width:1.5px;
+</pre>
 
         <h2 id="ai">Write agents with AI</h2>
         <p class="muted lead">
