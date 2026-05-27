@@ -1,0 +1,36 @@
+name: Release
+
+# Publishes the packages to npm when a vX.Y.Z tag is pushed.
+# Bump the version in packages/*/package.json, commit, then:
+#   git tag vX.Y.Z && git push origin vX.Y.Z
+# Requires an NPM_TOKEN repo secret (npm automation/granular token with publish rights).
+# pnpm -r publish skips any version already on the registry, so re-running is safe.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      - run: pnpm test
+
+      - run: pnpm -r publish --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
