@@ -77,4 +77,29 @@ describe("generate — codegen contract", () => {
     expect(code).not.toContain('from "zod"');
     expect(code).not.toContain("tools:");
   });
+
+  it("renders non-scalar interpolations via toonValue (not [object Object])", () => {
+    const src = [
+      "agent: dump",
+      "model: m",
+      "inputs[1]{name,type}:",
+      "  rows,string[]",
+      "prompt: |",
+      "  Data: {inputs.rows}",
+    ].join("\n");
+    const { ast, diagnostics } = analyze(src, "dump.agent");
+    expect(diagnostics).toEqual([]);
+    const code = generate(ast!);
+    expect(code).toContain("toonValue(inputs.rows)");
+    expect(code).toContain(
+      'import { createAgent, toonValue, type Agent } from "toad-runtime";',
+    );
+  });
+
+  it("leaves scalar interpolations as plain ${...} and omits the toonValue import", () => {
+    const { ast } = analyze(SOURCE, "researcher.agent");
+    const code = generate(ast!);
+    expect(code).toContain("${inputs.topic}");
+    expect(code).not.toContain("toonValue");
+  });
 });

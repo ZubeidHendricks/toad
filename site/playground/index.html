@@ -48,36 +48,56 @@
       </section>
 
       <section class="playground-page">
-        <div class="presets">
-          <span class="muted">Examples:</span>
-          <button type="button" class="chip" data-preset="researcher">
-            researcher
-          </button>
-          <button type="button" class="chip" data-preset="summarizer">
-            summarizer
-          </button>
-          <button type="button" class="chip" data-preset="digest">
-            digest ({#each})
-          </button>
-          <button type="button" class="chip" data-preset="report">
-            report ({#if})
-          </button>
-          <button type="button" class="chip" data-preset="brief">
-            brief (kitchen sink)
-          </button>
+        <div class="pg-toolbar">
+          <label class="ctl">
+            <span class="ctl-label">Example</span>
+            <select id="pg-preset" class="select">
+              <option value="researcher">researcher</option>
+              <option value="summarizer">summarizer</option>
+              <option value="digest">digest · {#each}</option>
+              <option value="report">report · {#if}</option>
+              <option value="brief">brief · kitchen sink</option>
+            </select>
+          </label>
+          <label class="ctl">
+            <span class="ctl-label">Compare to</span>
+            <select id="pg-baseline" class="select">
+              <option value="ts">Compiled TypeScript</option>
+              <option value="json">Equivalent JSON</option>
+            </select>
+          </label>
+          <span class="pg-toolbar-spacer"></span>
+          <button type="button" class="btn-ghost" id="pg-copy">Copy</button>
+          <button type="button" class="btn-ghost" id="pg-share">Share</button>
         </div>
+
         <div class="pg">
           <div class="pane">
-            <div class="pane-head">input.agent</div>
+            <div class="pane-head">
+              <span class="pane-title">input.agent</span>
+              <span class="meter" title="GPT token count (gpt-tokenizer) — estimated until the tokenizer loads">
+                <b id="in-tok">0</b> tokens
+                <span class="meter-sep">·</span>
+                <b id="in-chr">0</b> chars
+              </span>
+            </div>
             <textarea id="pg-input" spellcheck="false" autocapitalize="off"></textarea>
           </div>
           <div class="arrow" aria-hidden="true">→</div>
           <div class="pane">
-            <div class="pane-head">output.ts</div>
+            <div class="pane-head">
+              <span class="pane-title" id="out-title">output.ts</span>
+              <span class="meter" title="GPT token count (gpt-tokenizer) — estimated until the tokenizer loads">
+                <b id="out-tok">0</b> tokens
+                <span class="meter-sep">·</span>
+                <b id="out-chr">0</b> chars
+              </span>
+            </div>
             <pre><code id="pg-output"></code></pre>
           </div>
         </div>
         <p id="pg-status" class="pg-status"></p>
+        <p id="pg-savings" class="pg-savings"></p>
       </section>
     </main>
 

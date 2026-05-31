@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.95.2",
+    "@toon-format/toon": "2.3.0",
     "zod": "4.4.3"
   },
   "devDependencies": {
