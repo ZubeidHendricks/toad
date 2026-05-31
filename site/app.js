@@ -88,6 +88,41 @@ const setText = (id, text) => {
   if (el) el.textContent = text;
 };
 
+// Theme: an inline <head> script sets data-theme before paint (no flash); here
+// we add the nav toggle and persist the choice. Falls back gracefully if the
+// head script didn't run.
+(function setupTheme() {
+  const root = document.documentElement;
+  const current = () => root.getAttribute("data-theme") || "dark";
+  if (!root.getAttribute("data-theme")) root.setAttribute("data-theme", "dark");
+
+  const nav = document.querySelector("header.nav nav");
+  if (!nav) return;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "theme-toggle";
+  const render = () => {
+    const dark = current() !== "light";
+    btn.textContent = dark ? "☀️" : "🌙";
+    btn.setAttribute(
+      "aria-label",
+      `Switch to ${dark ? "light" : "dark"} theme`,
+    );
+  };
+  btn.addEventListener("click", () => {
+    const next = current() === "light" ? "dark" : "light";
+    root.setAttribute("data-theme", next);
+    try {
+      localStorage.setItem("toad-theme", next);
+    } catch {
+      /* storage may be unavailable; the choice just won't persist */
+    }
+    render();
+  });
+  render();
+  nav.appendChild(btn);
+})();
+
 // Static (no-compiler) hooks, safe to set on any page.
 setText("src-agent", AGENT_SRC);
 setText("lang-example", PRESETS.brief);

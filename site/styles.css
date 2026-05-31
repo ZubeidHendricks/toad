@@ -9,11 +9,44 @@
   --accent: #4ade80;
   --accent-2: #22d3ee;
   --err: #f87171;
+  --code: #cfe8da;
   --radius: 14px;
   --maxw: 1080px;
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   --sans:
     system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Theme toggle button (injected into the nav by app.js). */
+.theme-toggle {
+  margin-left: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  line-height: 1;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.theme-toggle:hover {
+  border-color: var(--accent);
+}
+
+/* Light theme — toggled by setting data-theme="light" on <html>. */
+:root[data-theme="light"] {
+  --bg: #f6faf7;
+  --surface: #ffffff;
+  --surface-2: #eef3ef;
+  --border: #d8e3dc;
+  --border-lit: #aacfba;
+  --text: #15201a;
+  --muted: #576f64;
+  --accent: #15a04a;
+  --accent-2: #0e9aba;
+  --err: #dc2626;
+  --code: #1c2c23;
 }
 
 * {
@@ -346,7 +379,7 @@ pre {
 }
 pre code {
   background: none;
-  color: #cfe8da;
+  color: var(--code);
   padding: 0;
   font-size: 0.82rem;
   line-height: 1.55;
@@ -512,7 +545,7 @@ pre code {
   border: none;
   resize: vertical;
   background: var(--surface);
-  color: #cfe8da;
+  color: var(--code);
   font-family: var(--mono);
   font-size: 0.82rem;
   line-height: 1.55;
