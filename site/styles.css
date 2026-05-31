@@ -9,11 +9,44 @@
   --accent: #4ade80;
   --accent-2: #22d3ee;
   --err: #f87171;
+  --code: #cfe8da;
   --radius: 14px;
   --maxw: 1080px;
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   --sans:
     system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Theme toggle button (injected into the nav by app.js). */
+.theme-toggle {
+  margin-left: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 999px;
+  width: 30px;
+  height: 30px;
+  line-height: 1;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.theme-toggle:hover {
+  border-color: var(--accent);
+}
+
+/* Light theme — toggled by setting data-theme="light" on <html>. */
+:root[data-theme="light"] {
+  --bg: #f6faf7;
+  --surface: #ffffff;
+  --surface-2: #eef3ef;
+  --border: #d8e3dc;
+  --border-lit: #aacfba;
+  --text: #15201a;
+  --muted: #576f64;
+  --accent: #15a04a;
+  --accent-2: #0e9aba;
+  --err: #dc2626;
+  --code: #1c2c23;
 }
 
 * {
@@ -303,12 +336,33 @@ section h2 {
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
 }
 .pane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 10px 16px;
   font-family: var(--mono);
   font-size: 0.8rem;
   color: var(--muted);
   border-bottom: 1px solid var(--border);
   background: var(--surface-2);
+}
+.pane-title {
+  color: var(--muted);
+}
+.meter {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.meter b {
+  color: var(--accent);
+  font-weight: 600;
+}
+.meter-sep {
+  opacity: 0.5;
+  margin: 0 2px;
 }
 .tag {
   color: var(--accent);
@@ -325,7 +379,7 @@ pre {
 }
 pre code {
   background: none;
-  color: #cfe8da;
+  color: var(--code);
   padding: 0;
   font-size: 0.82rem;
   line-height: 1.55;
@@ -491,7 +545,7 @@ pre code {
   border: none;
   resize: vertical;
   background: var(--surface);
-  color: #cfe8da;
+  color: var(--code);
   font-family: var(--mono);
   font-size: 0.82rem;
   line-height: 1.55;
@@ -517,6 +571,72 @@ pre code {
 }
 .pg-status.err {
   color: var(--err);
+}
+
+/* Playground toolbar (TOON-style controls row) */
+.pg-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 22px 0 14px;
+}
+.pg-toolbar-spacer {
+  flex: 1 1 auto;
+}
+.ctl {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ctl-label {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.select {
+  appearance: none;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 30px 6px 12px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%238aa499' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color 0.15s ease;
+}
+.select:hover,
+.select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.btn-ghost {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.pg-savings {
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--accent);
+  min-height: 1.2em;
 }
 
 /* Community */

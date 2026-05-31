@@ -1,4 +1,5 @@
 import { z, type ZodType } from "zod";
+import { encode as toonEncode } from "@toon-format/toon";
 import {
   anthropicClient,
   type LlmClient,
@@ -14,10 +15,28 @@ import type { AnyToolDef, ToolDef } from "./tool.js";
 
 const RESPOND_TOOL = "respond";
 
+/** Token cost of a tool result, reported to `onToolResultEncoded`. */
+export interface ToolResultEncoding {
+  tool: string;
+  format: "json" | "toon";
+  /** Estimated tokens the JSON encoding would have cost. */
+  jsonTokens: number;
+  /** Estimated tokens actually sent to the model. */
+  sentTokens: number;
+  /** `jsonTokens - sentTokens` (0 when JSON was sent). */
+  savedTokens: number;
+}
+
 export interface AgentHooks {
   onToolCall?: (name: string, input: unknown) => void;
   onToolResult?: (name: string, output: unknown) => void;
   onError?: (error: unknown) => void;
+  /**
+   * Called after each tool result is serialized, with the token cost of the
+   * chosen encoding vs JSON. Sum `savedTokens` to log "saved N tokens this run"
+   * when using `toolResultFormat: "auto"` or `"toon"`.
+   */
+  onToolResultEncoded?: (info: ToolResultEncoding) => void;
 }
 
 export interface AgentConfig<I, O> {
@@ -36,6 +55,15 @@ export interface AgentConfig<I, O> {
   maxTokens?: number;
   /** Retry the model call up to this many times on error. */
   retries?: number;
+  /**
+   * How non-string tool results are serialized back into the conversation:
+   * - `"json"` (default): `JSON.stringify` — maximally compatible.
+   * - `"toon"`: always encode objects/arrays as TOON — fewest tokens for
+   *   uniform/tabular data, but the model must read TOON.
+   * - `"auto"`: use TOON only when it is meaningfully smaller than JSON, else
+   *   JSON. Never increases tokens; the recommended setting for token savings.
+   */
+  toolResultFormat?: "json" | "toon" | "auto";
   /** Observability / guardrail hooks. */
   hooks?: AgentHooks;
   /** Injectable for testing; defaults to the real Anthropic client. */
@@ -172,7 +200,18 @@ export function createAgent<I, O = string>(
             throw new ToolError(tu.name, err);
           }
           hooks?.onToolResult?.(tu.name, output);
-          results.push(toolResult(tu.id, stringify(output)));
+          const enc = serializeResult(
+            output,
+            config.toolResultFormat ?? "json",
+          );
+          results.push(toolResult(tu.id, enc.text));
+          hooks?.onToolResultEncoded?.({
+            tool: tu.name,
+            format: enc.format,
+            jsonTokens: enc.jsonTokens,
+            sentTokens: enc.sentTokens,
+            savedTokens: Math.max(0, enc.jsonTokens - enc.sentTokens),
+          });
         }
 
         messages.push({ role: "user", content: results });
@@ -244,6 +283,94 @@ function joinText(content: { type: string }[]): string {
     .join("");
 }
 
-function stringify(value: unknown): string {
-  return typeof value === "string" ? value : JSON.stringify(value);
+/**
+ * Render a value for interpolation into a prompt. Scalars coerce to string
+ * exactly as a template literal would; objects and arrays become TOON (the
+ * token-efficient, LLM-legible encoding) instead of the useless `[object
+ * Object]`. The compiler emits a call to this only for non-scalar inputs, so
+ * scalar interpolations stay byte-identical to plain `${...}`.
+ */
+export function toonValue(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value !== "object") return String(value);
+  try {
+    return toonEncode(value as never);
+  } catch {
+    return JSON.stringify(value);
+  }
+}
+
+/**
+ * Approximate GPT-style token count. The runtime stays dependency-free, so this
+ * is a heuristic (words ≈ 4 chars/token, numbers denser, symbols sparser), good
+ * enough to report the savings reported via the `onToolResult` encoding hook.
+ */
+function estimateTokens(text: string): number {
+  if (!text) return 0;
+  const pieces =
+    text.match(
+      /'(?:s|t|re|ve|m|ll|d)|[^\s\p{L}\p{N}]+|\s*\p{L}+|\s*\p{N}+|\s+/gu,
+    ) ?? [];
+  let tokens = 0;
+  for (const piece of pieces) {
+    const t = piece.trim();
+    if (!t) tokens += Math.max(1, Math.ceil(piece.length / 6));
+    else if (/\p{L}/u.test(t)) tokens += Math.max(1, Math.round(t.length / 4));
+    else if (/\p{N}/u.test(t)) tokens += Math.max(1, Math.ceil(t.length / 3));
+    else tokens += Math.max(1, Math.ceil(t.length / 2));
+  }
+  return tokens;
+}
+
+interface SerializedResult {
+  /** The text sent back to the model. */
+  text: string;
+  /** Which encoding was chosen. */
+  format: "json" | "toon";
+  /** Estimated tokens the JSON encoding would have cost. */
+  jsonTokens: number;
+  /** Estimated tokens actually sent. */
+  sentTokens: number;
+}
+
+/**
+ * Serialize a tool result for the conversation. Strings pass through; objects
+ * and arrays are encoded as JSON or TOON depending on `format`. TOON is a more
+ * token-efficient, LLM-legible encoding of the JSON data model — see TOAD's
+ * naming. `"auto"` only chooses TOON when it is at least 15% smaller, so it can
+ * never make a result more expensive than JSON. Returns the chosen text plus
+ * the token cost of JSON vs what was sent, so callers can measure savings.
+ */
+function serializeResult(
+  value: unknown,
+  format: "json" | "toon" | "auto",
+): SerializedResult {
+  if (typeof value === "string") {
+    const t = estimateTokens(value);
+    return { text: value, format: "json", jsonTokens: t, sentTokens: t };
+  }
+  const json = JSON.stringify(value) ?? String(value);
+  const jsonTokens = estimateTokens(json);
+  const measured = (text: string, fmt: "json" | "toon"): SerializedResult => ({
+    text,
+    format: fmt,
+    jsonTokens,
+    sentTokens: estimateTokens(text),
+  });
+
+  if (format === "json") return measured(json, "json");
+
+  let toon: string;
+  try {
+    toon = toonEncode(value as never);
+  } catch {
+    // TOON can only encode the JSON data model; fall back for anything else.
+    return measured(json, "json");
+  }
+  if (format === "toon") return measured(toon, "toon");
+  // "auto": adopt TOON only on a clear win (guards against marginal swaps that
+  // trade JSON's ubiquity for a few tokens).
+  return toon.length <= json.length * 0.85
+    ? measured(toon, "toon")
+    : measured(json, "json");
 }

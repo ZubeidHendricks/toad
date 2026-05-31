@@ -209,6 +209,126 @@ describe("createAgent", () => {
     expect(events).toEqual(["call:search", "result:search"]);
   });
 
+  it("encodes tool results as TOON when toolResultFormat is 'auto'", async () => {
+    const requests: LlmRequest[] = [];
+    const rows = defineTool({
+      description: "return tabular rows",
+      input: z.object({}),
+      run: () => ({
+        results: [
+          { rank: 1, title: "alpha", score: 0.9 },
+          { rank: 2, title: "beta", score: 0.8 },
+        ],
+      }),
+    });
+    const client: LlmClient = {
+      create: async (req) => {
+        requests.push(req);
+        return requests.length === 1
+          ? {
+              stop_reason: "tool_use",
+              content: [{ type: "tool_use", id: "t", name: "rows", input: {} }],
+            }
+          : {
+              stop_reason: "end_turn",
+              content: [{ type: "text", text: "ok" }],
+            };
+      },
+    };
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      tools: { rows },
+      prompt: () => "go",
+      toolResultFormat: "auto",
+      client,
+    });
+    await agent.run({});
+    // The second request carries the tool result; it should be TOON (tabular
+    // header), not JSON (no leading brace / quoted keys).
+    const content = JSON.stringify(requests[1]?.messages);
+    expect(content).toContain("results[2]{rank,title,score}:");
+    expect(content).not.toContain('{\\"results\\"');
+  });
+
+  it("keeps tool results as JSON by default", async () => {
+    const requests: LlmRequest[] = [];
+    const rows = defineTool({
+      description: "return rows",
+      input: z.object({}),
+      run: () => ({ results: [{ rank: 1, title: "alpha" }] }),
+    });
+    const client: LlmClient = {
+      create: async (req) => {
+        requests.push(req);
+        return requests.length === 1
+          ? {
+              stop_reason: "tool_use",
+              content: [{ type: "tool_use", id: "t", name: "rows", input: {} }],
+            }
+          : {
+              stop_reason: "end_turn",
+              content: [{ type: "text", text: "ok" }],
+            };
+      },
+    };
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      tools: { rows },
+      prompt: () => "go",
+      client,
+    });
+    await agent.run({});
+    const content = JSON.stringify(requests[1]?.messages);
+    expect(content).toContain("results");
+    expect(content).toContain("rank");
+    // JSON encoding keeps quoted keys; TOON's tabular header must be absent.
+    expect(content).not.toContain("results[1]{");
+  });
+
+  it("reports token savings via onToolResultEncoded", async () => {
+    const events: import("./agent.js").ToolResultEncoding[] = [];
+    const rows = defineTool({
+      description: "rows",
+      input: z.object({}),
+      run: () => ({
+        results: [
+          { rank: 1, title: "alpha", score: 0.9 },
+          { rank: 2, title: "beta", score: 0.8 },
+          { rank: 3, title: "gamma", score: 0.7 },
+        ],
+      }),
+    });
+    let n = 0;
+    const client: LlmClient = {
+      create: async () =>
+        n++ === 0
+          ? {
+              stop_reason: "tool_use",
+              content: [{ type: "tool_use", id: "t", name: "rows", input: {} }],
+            }
+          : {
+              stop_reason: "end_turn",
+              content: [{ type: "text", text: "ok" }],
+            },
+    };
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      tools: { rows },
+      prompt: () => "go",
+      toolResultFormat: "auto",
+      client,
+      hooks: { onToolResultEncoded: (info) => events.push(info) },
+    });
+    await agent.run({});
+    expect(events).toHaveLength(1);
+    expect(events[0]!.format).toBe("toon");
+    expect(events[0]!.savedTokens).toBeGreaterThan(0);
+    expect(events[0]!.sentTokens).toBeLessThan(events[0]!.jsonTokens);
+  });
+
   it("streams text deltas via agent.stream()", async () => {
     const client: LlmClient = {
       create: async () => ({ stop_reason: "end_turn", content: [] }),

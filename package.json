@@ -13,11 +13,12 @@
     "typecheck": "turbo run typecheck",
     "lint": "prettier --check .",
     "format": "prettier --write .",
-    "build:site": "esbuild packages/compiler/dist/index.js --bundle --format=esm --outfile=site/toad-compiler.js"
+    "build:site": "esbuild packages/compiler/dist/index.js --bundle --format=esm --outfile=site/toad-compiler.js && esbuild scripts/tokenizer-entry.mjs --bundle --format=esm --outfile=site/toad-tokenizer.js"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "esbuild": "0.28.0",
+    "gpt-tokenizer": "^3.4.0",
     "prettier": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:",

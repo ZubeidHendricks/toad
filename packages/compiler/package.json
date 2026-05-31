@@ -49,7 +49,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@toon-format/toon": "2.2.0"
+    "@toon-format/toon": "2.3.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",

@@ -88,6 +88,41 @@ const setText = (id, text) => {
   if (el) el.textContent = text;
 };
 
+// Theme: an inline <head> script sets data-theme before paint (no flash); here
+// we add the nav toggle and persist the choice. Falls back gracefully if the
+// head script didn't run.
+(function setupTheme() {
+  const root = document.documentElement;
+  const current = () => root.getAttribute("data-theme") || "dark";
+  if (!root.getAttribute("data-theme")) root.setAttribute("data-theme", "dark");
+
+  const nav = document.querySelector("header.nav nav");
+  if (!nav) return;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "theme-toggle";
+  const render = () => {
+    const dark = current() !== "light";
+    btn.textContent = dark ? "☀️" : "🌙";
+    btn.setAttribute(
+      "aria-label",
+      `Switch to ${dark ? "light" : "dark"} theme`,
+    );
+  };
+  btn.addEventListener("click", () => {
+    const next = current() === "light" ? "dark" : "light";
+    root.setAttribute("data-theme", next);
+    try {
+      localStorage.setItem("toad-theme", next);
+    } catch {
+      /* storage may be unavailable; the choice just won't persist */
+    }
+    render();
+  });
+  render();
+  nav.appendChild(btn);
+})();
+
 // Static (no-compiler) hooks, safe to set on any page.
 setText("src-agent", AGENT_SRC);
 setText("lang-example", PRESETS.brief);
@@ -96,14 +131,75 @@ setText("lang-example", PRESETS.brief);
 // generated-output panes degrade.
 let compile = null;
 let formatDiagnostic = null;
+let preprocess = null;
+let decodeToon = null;
 try {
   // app.js always lives at the site root, so this specifier (resolved relative
   // to app.js, not the page) points at the bundle from every page.
   const mod = await import("./toad-compiler.js");
   compile = mod.compile;
   formatDiagnostic = mod.formatDiagnostic;
+  preprocess = mod.preprocess;
+  decodeToon = mod.decodeToon;
 } catch (err) {
   console.error("TOAD: compiler bundle failed to load", err);
+}
+
+// Approximate GPT-style token count. Not a real BPE tokenizer (we keep the site
+// dependency-free), but close enough to show the token story TOAD is named for:
+// words ≈ 4 chars/token, numbers denser, symbol runs sparser, whitespace counts.
+function estimateTokens(text) {
+  if (!text) return 0;
+  const pieces =
+    text.match(/'(?:s|t|re|ve|m|ll|d)|[^\s\p{L}\p{N}]+|\s*\p{L}+|\s*\p{N}+|\s+/gu) || [];
+  let tokens = 0;
+  for (const piece of pieces) {
+    const t = piece.trim();
+    if (!t) {
+      tokens += Math.max(1, Math.ceil(piece.length / 6));
+    } else if (/\p{L}/u.test(t)) {
+      tokens += Math.max(1, Math.round(t.length / 4));
+    } else if (/\p{N}/u.test(t)) {
+      tokens += Math.max(1, Math.ceil(t.length / 3));
+    } else {
+      tokens += Math.max(1, Math.ceil(t.length / 2));
+    }
+  }
+  return tokens;
+}
+
+// Exact GPT token count (gpt-tokenizer), lazy-loaded — its bundle is large, so
+// the playground starts on the estimate above and upgrades to exact counts once
+// it arrives. `countTokens` falls back to the estimate until then.
+let exactCount = null;
+function countTokens(text) {
+  return exactCount ? exactCount(text) : estimateTokens(text);
+}
+async function loadExactTokenizer() {
+  try {
+    const mod = await import("./toad-tokenizer.js");
+    exactCount = mod.countTokens;
+    return true;
+  } catch (err) {
+    console.error("TOAD: tokenizer bundle failed to load", err);
+    return false;
+  }
+}
+
+// The "Equivalent JSON" baseline: lower the .agent superset to plain TOON, decode
+// it with the reference decoder, and pretty-print — i.e. what the same agent would
+// cost written as JSON. Mirrors the TOON playground's JSON ↔ TOON comparison.
+function toEquivalentJson(source) {
+  if (!preprocess || !decodeToon) return null;
+  try {
+    const { toon, diagnostics: pd } = preprocess(source, "agent.agent");
+    if (pd && pd.some((d) => d.severity === "error")) return null;
+    const { value, diagnostics: dd } = decodeToon(toon, "agent.agent");
+    if (value === undefined || (dd && dd.length)) return null;
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return null;
+  }
 }
 
 function compileText(source) {
@@ -142,37 +238,168 @@ document.querySelectorAll("[data-ex]").forEach((el) => {
   }
 });
 
-// Playground: live recompile on input.
+// Playground: live recompile on input, with token/char meters, a JSON/TS
+// comparison baseline, shareable links, and copy-to-clipboard.
 const input = $("pg-input");
 if (input) {
   const status = $("pg-status");
+  const preset = $("pg-preset");
+  const baseline = $("pg-baseline");
+  const num = (n) => n.toLocaleString("en-US");
+
+  // Decode a shared source from the URL hash (#a=<base64url>), if present.
+  const fromHash = () => {
+    const m = location.hash.match(/[#&]a=([^&]+)/);
+    if (!m) return null;
+    try {
+      const b64 = m[1].replace(/-/g, "+").replace(/_/g, "/");
+      return decodeURIComponent(escape(atob(b64)));
+    } catch {
+      return null;
+    }
+  };
+
   if (compile) {
-    input.value = AGENT_SRC;
+    input.value = fromHash() || AGENT_SRC;
+
+    const setMeter = (tokId, chrId, text) => {
+      setText(tokId, num(countTokens(text)));
+      setText(chrId, num(text.length));
+    };
+
     const run = () => {
       const out = $("pg-output");
       if (!out) return;
-      const res = renderInto(out, input.value);
+      const src = input.value;
+      const mode = baseline ? baseline.value : "ts";
+
+      // Left pane always meters the .agent source.
+      setMeter("in-tok", "in-chr", src);
+
+      // Right pane: compiled TypeScript, or the equivalent-JSON baseline.
+      let outText;
+      let ok = true;
+      let count = 0;
+      if (mode === "json") {
+        setText("out-title", "output.json");
+        const json = toEquivalentJson(src);
+        if (json !== null) {
+          outText = json;
+        } else {
+          const res = compileText(src);
+          outText = "// can't decode to JSON yet — fix the agent first\n" + res.text;
+          ok = res.ok;
+          count = res.count;
+        }
+      } else {
+        setText("out-title", "output.ts");
+        const res = compileText(src);
+        outText = res.text;
+        ok = res.ok;
+        count = res.count;
+      }
+      out.textContent = outText;
+      setMeter("out-tok", "out-chr", outText);
+
       if (status) {
-        status.textContent = res.ok ? "✓ compiled" : `✗ ${res.count} error(s)`;
-        status.className = "pg-status " + (res.ok ? "ok" : "err");
+        status.textContent = ok ? "✓ compiled" : `✗ ${count} error(s)`;
+        status.className = "pg-status " + (ok ? "ok" : "err");
+      }
+
+      // Savings line: how compact the .agent source is vs the equivalent JSON.
+      const savings = $("pg-savings");
+      if (savings) {
+        const json = toEquivalentJson(src);
+        if (json !== null) {
+          const a = countTokens(src);
+          const j = countTokens(json);
+          const pct = j > 0 ? Math.round((1 - a / j) * 100) : 0;
+          savings.textContent =
+            pct > 0
+              ? `🐸 The .agent is ~${pct}% fewer tokens than the equivalent JSON (${num(a)} vs ${num(j)}).`
+              : "";
+        } else {
+          savings.textContent = "";
+        }
       }
     };
+
     let timer;
     input.addEventListener("input", () => {
       clearTimeout(timer);
       timer = setTimeout(run, 150);
     });
+    if (baseline) baseline.addEventListener("change", run);
     run();
 
+    // Upgrade the estimated meters to exact GPT counts once the (large)
+    // tokenizer bundle loads, then re-render with the precise numbers.
+    loadExactTokenizer().then((ok) => {
+      if (ok) run();
+    });
+
+    // Preset dropdown.
+    if (preset) {
+      preset.addEventListener("change", () => {
+        const key = preset.value;
+        if (PRESETS[key]) {
+          input.value = PRESETS[key];
+          run();
+        }
+      });
+    }
+    // Legacy preset chips, if any page still renders them.
     document.querySelectorAll("[data-preset]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const key = btn.getAttribute("data-preset");
         if (key && PRESETS[key]) {
           input.value = PRESETS[key];
+          if (preset) preset.value = key;
           run();
         }
       });
     });
+
+    // Share: encode the current source into the URL and copy the link.
+    const shareBtn = $("pg-share");
+    if (shareBtn) {
+      shareBtn.addEventListener("click", async () => {
+        const b64 = btoa(unescape(encodeURIComponent(input.value)))
+          .replace(/\+/g, "-")
+          .replace(/\//g, "_")
+          .replace(/=+$/, "");
+        const url = `${location.origin}${location.pathname}#a=${b64}`;
+        history.replaceState(null, "", url);
+        const original = shareBtn.textContent;
+        try {
+          await navigator.clipboard.writeText(url);
+          shareBtn.textContent = "Link copied ✓";
+        } catch {
+          shareBtn.textContent = "Copy the URL";
+        }
+        setTimeout(() => {
+          shareBtn.textContent = original;
+        }, 1500);
+      });
+    }
+
+    // Copy: the current output pane.
+    const copyOut = $("pg-copy");
+    if (copyOut) {
+      copyOut.addEventListener("click", async () => {
+        const out = $("pg-output");
+        const original = copyOut.textContent;
+        try {
+          await navigator.clipboard.writeText(out ? out.textContent : "");
+          copyOut.textContent = "Copied ✓";
+        } catch {
+          copyOut.textContent = "Copy failed";
+        }
+        setTimeout(() => {
+          copyOut.textContent = original;
+        }, 1500);
+      });
+    }
   } else {
     input.value = AGENT_SRC;
     input.setAttribute("disabled", "true");

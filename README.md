@@ -75,6 +75,13 @@ The generated agent runs a tool-use loop over the Anthropic API with:
 - **Lifecycle** — `retries`, `maxTurns`, and `onToolCall` / `onToolResult` /
   `onError` hooks.
 - **Streaming** — `agent.stream(inputs)` yields text deltas.
+- **Token-efficient tool results** — set `toolResultFormat: "auto"` to feed tool
+  results back to the model as TOON instead of JSON when it saves tokens
+  (~30–50% on tabular results), so multi-turn loops stay cheap. Defaults to
+  `"json"`; `"toon"` always encodes. The `onToolResultEncoded` hook reports the
+  tokens saved per result, so you can log "saved N tokens this run".
+- **TOON inputs** — object/array values interpolated into a prompt render as
+  TOON automatically, not `[object Object]`.
 
 ## Packages
 
