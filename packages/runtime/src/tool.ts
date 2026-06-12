@@ -1,5 +1,11 @@
 import type { ZodType } from "zod";
 
+/** Passed to a tool's `run` so long-running tools can cooperate with callers. */
+export interface ToolRunContext {
+  /** Aborted when the caller cancels the run (`run(inputs, { signal })`). */
+  signal?: AbortSignal;
+}
+
 /**
  * A typed tool. The tool's *name* comes from the key it is registered under in
  * an agent's `tools` record, so it isn't part of the definition itself.
@@ -8,7 +14,9 @@ export interface ToolDef<I = unknown> {
   description: string;
   /** Zod schema for the tool input; also the source of its JSON schema. */
   input: ZodType<I>;
-  run: (input: I) => unknown | Promise<unknown>;
+  /** Execution timeout (ms) for this tool; overrides the agent's `toolTimeoutMs`. */
+  timeoutMs?: number;
+  run: (input: I, ctx?: ToolRunContext) => unknown | Promise<unknown>;
 }
 
 /** Identity helper that infers the tool's input type from its Zod schema. */

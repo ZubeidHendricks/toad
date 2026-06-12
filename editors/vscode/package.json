@@ -2,7 +2,7 @@
   "name": "toad-agent",
   "displayName": "TOAD Agent",
   "description": "Syntax highlighting and live compiler diagnostics for TOAD .agent files — token-oriented, declarative AI agents compiled to typed TypeScript.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "ZubeidHendricks",
   "license": "MIT",
   "icon": "icon.png",

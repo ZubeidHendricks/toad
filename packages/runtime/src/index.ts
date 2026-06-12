@@ -6,7 +6,7 @@
 
 export const RUNTIME_VERSION = "0.2.0";
 
-export { defineTool, type ToolDef } from "./tool.js";
+export { defineTool, type ToolDef, type ToolRunContext } from "./tool.js";
 export {
   createAgent,
   toonValue,
@@ -14,6 +14,8 @@ export {
   type AgentConfig,
   type AgentHooks,
   type AgentSession,
+  type RunOptions,
+  type SessionState,
   type TokenUsage,
   type ToolResultEncoding,
 } from "./agent.js";
@@ -21,6 +23,7 @@ export { MaxTurnsError, OutputParseError, ToolError } from "./errors.js";
 export {
   anthropicClient,
   type LlmBlock,
+  type LlmCallOptions,
   type LlmClient,
   type LlmRequest,
   type LlmResponse,

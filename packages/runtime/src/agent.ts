@@ -81,6 +81,11 @@ export interface AgentConfig<I, O> {
   /** Retry the model call up to this many times on error. */
   retries?: number;
   /**
+   * Default execution timeout (ms) for every tool; a tool's own `timeoutMs`
+   * overrides it. A timed-out tool fails the run with a `ToolError`.
+   */
+  toolTimeoutMs?: number;
+  /**
    * How non-string tool results are serialized back into the conversation:
    * - `"json"` (default): `JSON.stringify` — maximally compatible.
    * - `"toon"`: always encode objects/arrays as TOON — fewest tokens for
@@ -95,6 +100,22 @@ export interface AgentConfig<I, O> {
   client?: LlmClient;
 }
 
+/** Per-call options for `run()` / `send()` / `stream()`. */
+export interface RunOptions {
+  /** Abort the run: cancels the in-flight model call and is visible to tools. */
+  signal?: AbortSignal;
+}
+
+/**
+ * A JSON-serializable snapshot of a session — persist it anywhere (a file, a
+ * row, a KV store) and pass it back to `agent.session(inputs, state)` to
+ * resume the conversation after a restart.
+ */
+export interface SessionState {
+  messages: LlmMessage[];
+  usage: TokenUsage;
+}
+
 /**
  * A multi-turn conversation with an agent. Each `send()` runs the full
  * tool-use loop and the conversation (including tool calls and results)
@@ -106,20 +127,22 @@ export interface AgentSession<O = string> {
    * sent (an optional `message` is appended to it); afterwards `message` is
    * required. Returns the typed result, exactly like `run()`.
    */
-  send(message?: string): Promise<O>;
+  send(message?: string, options?: RunOptions): Promise<O>;
   /** A snapshot of the conversation so far. */
   readonly messages: readonly LlmMessage[];
   /** Cumulative token usage for the session (zeros if the client reports none). */
   readonly usage: TokenUsage;
+  /** A JSON-serializable snapshot; restore with `agent.session(inputs, state)`. */
+  readonly state: SessionState;
 }
 
 export interface Agent<I, O> {
   readonly name: string;
-  run(inputs: I): Promise<O>;
-  /** Start a multi-turn conversation that keeps history between sends. */
-  session(inputs: I): AgentSession<O>;
+  run(inputs: I, options?: RunOptions): Promise<O>;
+  /** Start (or, given a saved state, resume) a multi-turn conversation. */
+  session(inputs: I, state?: SessionState): AgentSession<O>;
   /** Stream the model's text for the prompt (no tools / structured output). */
-  stream(inputs: I): AsyncIterable<string>;
+  stream(inputs: I, options?: RunOptions): AsyncIterable<string>;
   /** Expose this agent as a tool that another agent can call. */
   asTool(options?: { description?: string }): ToolDef<I>;
 }
@@ -159,16 +182,23 @@ export function createAgent<I, O = string>(
       ? config.system(inputs)
       : (config.description ?? `You are ${config.name}.`);
 
-  const makeSession = (inputs: I): AgentSession<O> => {
+  const makeSession = (inputs: I, state?: SessionState): AgentSession<O> => {
     const client = config.client ?? anthropicClient();
     const hooks = config.hooks;
     const attempts = (config.retries ?? 0) + 1;
-    const callModel = async (req: LlmRequest): Promise<LlmResponse> => {
+    const callModel = async (
+      req: LlmRequest,
+      signal: AbortSignal | undefined,
+    ): Promise<LlmResponse> => {
       let lastError: unknown;
       for (let attempt = 0; attempt < attempts; attempt++) {
         try {
-          return await client.create(req);
+          return await client.create(req, signal ? { signal } : undefined);
         } catch (error) {
+          // A cancellation is deliberate — don't burn retries on it.
+          if (signal?.aborted) {
+            throw error;
+          }
           lastError = error;
           hooks?.onError?.(error);
         }
@@ -176,16 +206,19 @@ export function createAgent<I, O = string>(
       throw lastError;
     };
 
-    const messages: LlmMessage[] = [];
-    const total: TokenUsage = {
-      inputTokens: 0,
-      outputTokens: 0,
-      cacheReadTokens: 0,
-      cacheWriteTokens: 0,
-    };
-    let started = false;
+    const messages: LlmMessage[] = state ? [...state.messages] : [];
+    const total: TokenUsage = state
+      ? { ...state.usage }
+      : {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
+        };
+    let started = messages.length > 0;
 
-    const send = async (message?: string): Promise<O> => {
+    const send = async (message?: string, options?: RunOptions): Promise<O> => {
+      const signal = options?.signal;
       let userText: string;
       if (!started) {
         started = true;
@@ -208,6 +241,7 @@ export function createAgent<I, O = string>(
 
       // Each send gets a fresh turn budget; the conversation carries over.
       for (let turn = 0; turn < maxTurns; turn++) {
+        signal?.throwIfAborted();
         const req: LlmRequest = {
           model: config.model,
           max_tokens: maxTokens,
@@ -226,7 +260,7 @@ export function createAgent<I, O = string>(
         if (config.temperature !== undefined) {
           req.temperature = config.temperature;
         }
-        const res = await callModel(req);
+        const res = await callModel(req, signal);
         trackUsage(res, total, hooks);
 
         const toolUses = res.content.filter(
@@ -287,7 +321,13 @@ export function createAgent<I, O = string>(
             hooks?.onToolCall?.(tu.name, input.data);
             let output: unknown;
             try {
-              output = await def.run(input.data);
+              output = await runTool(
+                def,
+                input.data,
+                tu.name,
+                def.timeoutMs ?? config.toolTimeoutMs,
+                signal,
+              );
             } catch (err) {
               hooks?.onError?.(err);
               throw new ToolError(tu.name, err);
@@ -322,20 +362,27 @@ export function createAgent<I, O = string>(
       get usage(): TokenUsage {
         return { ...total };
       },
+      get state(): SessionState {
+        return {
+          messages: structuredClone(messages),
+          usage: { ...total },
+        };
+      },
     };
   };
 
   const agent: Agent<I, O> = {
     name: config.name,
-    run(inputs: I): Promise<O> {
-      return makeSession(inputs).send();
+    run(inputs: I, options?: RunOptions): Promise<O> {
+      return makeSession(inputs).send(undefined, options);
     },
-    session(inputs: I): AgentSession<O> {
-      return makeSession(inputs);
+    session(inputs: I, state?: SessionState): AgentSession<O> {
+      return makeSession(inputs, state);
     },
-    stream(inputs: I): AsyncIterable<string> {
+    stream(inputs: I, options?: RunOptions): AsyncIterable<string> {
       const client = config.client ?? anthropicClient();
       const userText = config.prompt(inputs);
+      const signal = options?.signal;
       async function* generate(): AsyncGenerator<string> {
         if (client.stream === undefined) {
           throw new Error(
@@ -366,7 +413,10 @@ export function createAgent<I, O = string>(
           cacheWriteTokens: 0,
         };
         let sawUsage = false;
-        for await (const chunk of client.stream(req)) {
+        for await (const chunk of client.stream(
+          req,
+          signal ? { signal } : undefined,
+        )) {
           if (chunk.text !== undefined) {
             yield chunk.text;
           }
@@ -417,6 +467,38 @@ function toInputSchema(schema: ZodType<any>): Record<string, unknown> {
   const json = z.toJSONSchema(schema) as Record<string, unknown>;
   delete json.$schema;
   return json;
+}
+
+/**
+ * Run a tool body with the caller's signal and an optional timeout. The
+ * timeout rejects (the caller wraps it in `ToolError`); the underlying work is
+ * also told to stop via the context signal where it cooperates.
+ */
+async function runTool(
+  def: AnyToolDef,
+  input: unknown,
+  name: string,
+  timeoutMs: number | undefined,
+  signal: AbortSignal | undefined,
+): Promise<unknown> {
+  const exec = Promise.resolve(def.run(input, signal ? { signal } : {}));
+  if (timeoutMs === undefined) {
+    return exec;
+  }
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      exec,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`timed out after ${timeoutMs}ms`)),
+          timeoutMs,
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** Fold a response's usage into the running total and notify `onUsage`. */

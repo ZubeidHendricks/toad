@@ -45,6 +45,7 @@ const agent = createAgent({
 | `maxTokens`        | `number?` (default 4096)          | per-call token cap                                            |
 | `temperature`      | `number?` (0–1)                   | sampling temperature; omitted = API default                   |
 | `retries`          | `number?`                         | retry the model call on error                                 |
+| `toolTimeoutMs`    | `number?`                         | default per-tool execution timeout (a tool's `timeoutMs` overrides) |
 | `toolResultFormat` | `"json" \| "toon" \| "auto"`      | how non-string tool results are serialized (see below)        |
 | `hooks`            | `AgentHooks?`                     | observability / guardrail hooks                               |
 | `client`           | `LlmClient?`                      | injectable for testing; defaults to the real Anthropic client |
@@ -88,6 +89,46 @@ session.usage;    // cumulative TokenUsage for the session
 - The **first** `send()` sends the rendered prompt (an optional argument is appended to it); afterwards `send(message)` requires the message.
 - Each send runs the full tool-use loop with a fresh `maxTurns` budget and returns the same typed result as `run()` — with `outputs` declared, every send returns a validated object.
 - `run(inputs)` is exactly `session(inputs).send()`.
+
+### Persistence
+
+`session.state` is a JSON-serializable snapshot — persist it anywhere and resume after a restart:
+
+```ts
+await fs.writeFile("session.json", JSON.stringify(session.state));
+
+// later, in a new process
+const state = JSON.parse(await fs.readFile("session.json", "utf8"));
+const resumed = researcher.session({ topic: "TOON adoption" }, state);
+await resumed.send("Pick up where we left off.");
+```
+
+## Cancellation & timeouts {#cancellation}
+
+`run()`, `send()`, and `stream()` accept an `AbortSignal`; aborting cancels the in-flight API call (no retries are burned on it) and the signal is handed to tools through their run context:
+
+```ts
+const controller = new AbortController();
+setTimeout(() => controller.abort(), 30_000);
+
+await agent.run(inputs, { signal: controller.signal });
+
+// tools can cooperate:
+export const fetch_page = defineTool({
+  description: "Fetch a page",
+  input: z.object({ url: z.string() }),
+  run: ({ url }, ctx) => fetch(url, { signal: ctx?.signal }),
+});
+```
+
+Tools can also be time-boxed — per tool (`timeoutMs` on `defineTool`) or for the whole agent (`toolTimeoutMs` in the config). A timed-out tool fails the run with a `ToolError`:
+
+```ts
+const agent = createAgent({
+  // ...
+  toolTimeoutMs: 10_000, // every tool, unless it sets its own timeoutMs
+});
+```
 
 ## `defineTool()`
 

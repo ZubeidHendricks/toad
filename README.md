@@ -77,7 +77,11 @@ The generated agent runs a tool-use loop over the Anthropic API with:
 - **Lifecycle** — `retries`, `maxTurns`, and `onToolCall` / `onToolResult` /
   `onError` hooks.
 - **Sessions** — `agent.session(inputs)` keeps multi-turn conversation history
-  (tool calls included), with typed results per send.
+  (tool calls included), with typed results per send; `session.state` is a
+  JSON-serializable snapshot you can persist and resume.
+- **Cancellation & timeouts** — `run/send/stream` take an `AbortSignal`
+  (forwarded to the API call and to tools); `toolTimeoutMs` /
+  `defineTool({ timeoutMs })` time-box tool execution.
 - **Streaming** — `agent.stream(inputs)` yields text deltas.
 - **Token accounting** — the `onUsage` hook reports per-call and cumulative
   usage, including prompt-cache reads/writes; same-turn tool calls run

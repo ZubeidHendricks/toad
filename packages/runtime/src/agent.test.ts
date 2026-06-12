@@ -776,3 +776,195 @@ describe("stream usage", () => {
     ]);
   });
 });
+
+describe("session persistence", () => {
+  it("round-trips a session through state", async () => {
+    const client: LlmClient = {
+      create: async (req) => ({
+        stop_reason: "end_turn",
+        content: [{ type: "text", text: `n=${req.messages.length}` }],
+        usage: { input_tokens: 10, output_tokens: 2 },
+      }),
+    };
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      prompt: () => "go",
+      client,
+    });
+    const a = agent.session({});
+    await a.send();
+    const saved = JSON.parse(JSON.stringify(a.state));
+
+    // Restore into a brand-new session and keep talking.
+    const b = agent.session({}, saved);
+    expect(b.messages).toHaveLength(2);
+    expect(await b.send("more")).toBe("n=3");
+    expect(b.usage.inputTokens).toBe(20);
+  });
+
+  it("state is a snapshot — later sends don't mutate it", async () => {
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      prompt: () => "go",
+      client: scriptedClient([
+        { stop_reason: "end_turn", content: [{ type: "text", text: "a" }] },
+        { stop_reason: "end_turn", content: [{ type: "text", text: "b" }] },
+      ]),
+    });
+    const session = agent.session({});
+    await session.send();
+    const snap = session.state;
+    await session.send("more");
+    expect(snap.messages).toHaveLength(2);
+    expect(session.messages).toHaveLength(4);
+  });
+});
+
+describe("cancellation (AbortSignal)", () => {
+  it("rejects before calling the model when already aborted", async () => {
+    let called = false;
+    const client: LlmClient = {
+      create: async () => {
+        called = true;
+        return { stop_reason: "end_turn", content: [] };
+      },
+    };
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      prompt: () => "go",
+      client,
+    });
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      agent.run({}, { signal: controller.signal }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(called).toBe(false);
+  });
+
+  it("passes the signal to the client and does not retry an abort", async () => {
+    let calls = 0;
+    let seenSignal: AbortSignal | undefined;
+    const controller = new AbortController();
+    const client: LlmClient = {
+      create: async (_req, options) => {
+        calls += 1;
+        seenSignal = options?.signal;
+        controller.abort();
+        throw new Error("aborted mid-flight");
+      },
+    };
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      prompt: () => "go",
+      retries: 3,
+      client,
+    });
+    await expect(agent.run({}, { signal: controller.signal })).rejects.toThrow(
+      "aborted mid-flight",
+    );
+    expect(calls).toBe(1);
+    expect(seenSignal).toBe(controller.signal);
+  });
+
+  it("exposes the signal to tools via the run context", async () => {
+    let toolSignal: AbortSignal | undefined;
+    const probe = defineTool({
+      description: "probe",
+      input: z.object({}),
+      run: (_input, ctx) => {
+        toolSignal = ctx?.signal;
+        return "ok";
+      },
+    });
+    const controller = new AbortController();
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      tools: { probe },
+      prompt: () => "go",
+      client: scriptedClient([
+        {
+          stop_reason: "tool_use",
+          content: [{ type: "tool_use", id: "t", name: "probe", input: {} }],
+        },
+        { stop_reason: "end_turn", content: [{ type: "text", text: "done" }] },
+      ]),
+    });
+    await agent.run({}, { signal: controller.signal });
+    expect(toolSignal).toBe(controller.signal);
+  });
+});
+
+describe("tool timeouts", () => {
+  it("fails the run with ToolError when a tool exceeds its timeoutMs", async () => {
+    const slow = defineTool({
+      description: "never finishes",
+      input: z.object({}),
+      timeoutMs: 10,
+      run: () => new Promise(() => {}),
+    });
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      tools: { slow },
+      prompt: () => "go",
+      client: scriptedClient([
+        {
+          stop_reason: "tool_use",
+          content: [{ type: "tool_use", id: "t", name: "slow", input: {} }],
+        },
+      ]),
+    });
+    await expect(agent.run({})).rejects.toThrow(/timed out after 10ms/);
+  });
+
+  it("uses the agent-level toolTimeoutMs as the default", async () => {
+    const slow = defineTool({
+      description: "never finishes",
+      input: z.object({}),
+      run: () => new Promise(() => {}),
+    });
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      tools: { slow },
+      toolTimeoutMs: 10,
+      prompt: () => "go",
+      client: scriptedClient([
+        {
+          stop_reason: "tool_use",
+          content: [{ type: "tool_use", id: "t", name: "slow", input: {} }],
+        },
+      ]),
+    });
+    await expect(agent.run({})).rejects.toThrow(/timed out after 10ms/);
+  });
+
+  it("a fast tool is unaffected by the timeout", async () => {
+    const fast = defineTool({
+      description: "fast",
+      input: z.object({}),
+      timeoutMs: 1000,
+      run: () => "quick",
+    });
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      tools: { fast },
+      prompt: () => "go",
+      client: scriptedClient([
+        {
+          stop_reason: "tool_use",
+          content: [{ type: "tool_use", id: "t", name: "fast", input: {} }],
+        },
+        { stop_reason: "end_turn", content: [{ type: "text", text: "done" }] },
+      ]),
+    });
+    expect(await agent.run({})).toBe("done");
+  });
+});

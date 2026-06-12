@@ -1926,6 +1926,46 @@ function compile(source, file = "<input>") {
 
 // editors/vscode/src/extension.mjs
 var DEBOUNCE_MS = 200;
+var KEY_DOCS = {
+  agent: "**agent** (required) \u2014 the agent's name: an identifier, also the emitted export and filename.",
+  model: "**model** (required) \u2014 a Claude model id, e.g. `claude-opus-4-7`.",
+  description: "**description** \u2014 one line on what the agent does; doubles as the default system prompt and the default tool description for `asTool()`.",
+  inputs: "**inputs[N]{name,type}:** \u2014 N typed call parameters, one `name,type` row each. A trailing `?` (`detail?,string`) makes a field optional.",
+  tools: "**tools[N]: a,b** \u2014 N tool names, implemented in the co-located `<agent>.tools.ts`.",
+  prompt: "**prompt: |** (required) \u2014 the instruction prompt as an indented block. Supports `{inputs.x}`, `{env.X}`, `{#each}`, `{#if}`.",
+  outputs: "**outputs[N]{name,type}:** \u2014 N typed result fields; the agent returns a validated object instead of free text.",
+  system: "**system: |** \u2014 system prompt block; defaults to the description when absent.",
+  uses: "**uses[N]: a,b** \u2014 sub-agents wired in as tools via `asTool()`.",
+  maxTurns: "**maxTurns** \u2014 tool-use turn cap (default 8).",
+  retries: "**retries** \u2014 retry the model call this many times on error.",
+  temperature: "**temperature** \u2014 sampling temperature, a number from 0 to 1; omit for the API default."
+};
+var TEMPLATE_DOCS = {
+  "#each": "`{#each inputs.xs as x}` \u2026 `{/each}` \u2014 iterate an array input. Index: `as x, i`; empty fallback: `{:else}`; destructure: `as {a, b}`.",
+  "#if": "`{#if inputs.flag}` \u2026 `{:else if \u2026}` \u2026 `{:else}` \u2026 `{/if}` \u2014 condition on a boolean input; a leading `!` negates.",
+  ":else": "`{:else}` \u2014 the empty-list / false branch of `{#each}` or `{#if}`.",
+  "/each": "`{/each}` \u2014 closes an `{#each}` block.",
+  "/if": "`{/if}` \u2014 closes an `{#if}` block.",
+  "inputs.": "`{inputs.<name>}` \u2014 interpolate a declared input.",
+  "env.": "`{env.<NAME>}` \u2014 interpolate an environment variable (empty string when unset)."
+};
+function inputNames(doc) {
+  const text = doc.getText();
+  try {
+    const { ast } = analyze(text, doc.uri.fsPath);
+    if (ast) return ast.inputs.map((f) => f.name);
+  } catch {
+  }
+  const names = [];
+  const m = text.match(/^inputs\[\d+\][^\n]*\n((?:[ ]{2}[^\n]*\n?)*)/m);
+  if (m) {
+    for (const row of m[1].split("\n")) {
+      const r = /^ {2}([A-Za-z_][A-Za-z0-9_]*)\??,/.exec(row);
+      if (r) names.push(r[1]);
+    }
+  }
+  return names;
+}
 function activate(context) {
   const collection = vscode.languages.createDiagnosticCollection("toad");
   const timers = /* @__PURE__ */ new Map();
@@ -1970,9 +2010,86 @@ function activate(context) {
       }, DEBOUNCE_MS)
     );
   };
+  const hover = vscode.languages.registerHoverProvider("agent", {
+    provideHover(doc, position) {
+      const line = doc.lineAt(position.line).text;
+      const m = /^([A-Za-z_][A-Za-z0-9_]*)(?=[:\[])/.exec(line);
+      if (m && KEY_DOCS[m[1]] && position.character <= m[1].length) {
+        return new vscode.Hover(new vscode.MarkdownString(KEY_DOCS[m[1]]));
+      }
+      return void 0;
+    }
+  });
+  const completions = vscode.languages.registerCompletionItemProvider(
+    "agent",
+    {
+      provideCompletionItems(doc, position) {
+        const before = doc.lineAt(position.line).text.slice(0, position.character);
+        if (/\{inputs\.[A-Za-z0-9_]*$/.test(before)) {
+          return inputNames(doc).map((name) => {
+            const item = new vscode.CompletionItem(
+              name,
+              vscode.CompletionItemKind.Variable
+            );
+            item.detail = "declared input";
+            return item;
+          });
+        }
+        if (/\{[#:/A-Za-z]*$/.test(before) && before.includes("{")) {
+          return Object.entries(TEMPLATE_DOCS).map(([label, doc_]) => {
+            const item = new vscode.CompletionItem(
+              label,
+              vscode.CompletionItemKind.Keyword
+            );
+            item.documentation = new vscode.MarkdownString(doc_);
+            if (label === "#each") {
+              item.insertText = new vscode.SnippetString(
+                "#each inputs.${1:items} as ${2:item}}\n$0\n{/each}"
+              );
+            } else if (label === "#if") {
+              item.insertText = new vscode.SnippetString(
+                "#if inputs.${1:flag}}\n$0\n{/if}"
+              );
+            }
+            return item;
+          });
+        }
+        if (/^[A-Za-z]*$/.test(before)) {
+          return Object.entries(KEY_DOCS).map(([key, doc_]) => {
+            const item = new vscode.CompletionItem(
+              key,
+              vscode.CompletionItemKind.Property
+            );
+            item.documentation = new vscode.MarkdownString(doc_);
+            if (key === "inputs" || key === "outputs") {
+              item.insertText = new vscode.SnippetString(
+                `${key}[\${1:1}]{name,type}:
+  \${2:name},\${3:string}`
+              );
+            } else if (key === "prompt" || key === "system") {
+              item.insertText = new vscode.SnippetString(`${key}: |
+  $0`);
+            } else if (key === "tools" || key === "uses") {
+              item.insertText = new vscode.SnippetString(
+                `${key}[\${1:1}]: \${2:name}`
+              );
+            } else {
+              item.insertText = new vscode.SnippetString(`${key}: $0`);
+            }
+            return item;
+          });
+        }
+        return void 0;
+      }
+    },
+    "{",
+    "."
+  );
   vscode.workspace.textDocuments.forEach(refresh);
   context.subscriptions.push(
     collection,
+    hover,
+    completions,
     vscode.workspace.onDidOpenTextDocument(refresh),
     vscode.workspace.onDidChangeTextDocument((e) => refreshSoon(e.document)),
     vscode.workspace.onDidCloseTextDocument((doc) => {

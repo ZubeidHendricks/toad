@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0
+
+- **Hover docs** for every top-level key.
+- **Completions**: top-level keys (with snippets for `inputs`/`outputs`/`prompt`/`tools`), template constructs after `{` (`#each`/`#if` expand to full blocks), and your declared input names after `{inputs.`.
+
 ## 0.2.0
 
 - **Live diagnostics** — the real `toac` compiler is bundled into the extension and validates `.agent` files as you type (located errors, debounced, with `TOAxxx` codes).

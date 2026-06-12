@@ -66,10 +66,18 @@ export interface LlmStreamChunk {
   usage?: LlmUsage;
 }
 
+/** Per-call options (cancellation). */
+export interface LlmCallOptions {
+  signal?: AbortSignal;
+}
+
 export interface LlmClient {
-  create(req: LlmRequest): Promise<LlmResponse>;
+  create(req: LlmRequest, options?: LlmCallOptions): Promise<LlmResponse>;
   /** Optional: stream text deltas for a request. */
-  stream?(req: LlmRequest): AsyncIterable<LlmStreamChunk>;
+  stream?(
+    req: LlmRequest,
+    options?: LlmCallOptions,
+  ): AsyncIterable<LlmStreamChunk>;
 }
 
 /**
@@ -82,9 +90,10 @@ export function anthropicClient(options?: { apiKey?: string }): LlmClient {
     options?.apiKey ? { apiKey: options.apiKey } : {},
   );
   return {
-    async create(req) {
+    async create(req, options) {
       const res = (await client.messages.create(
         req as never,
+        options?.signal ? { signal: options.signal } : undefined,
       )) as unknown as LlmResponse;
       const out: LlmResponse = {
         content: res.content,
@@ -95,8 +104,11 @@ export function anthropicClient(options?: { apiKey?: string }): LlmClient {
       }
       return out;
     },
-    async *stream(req) {
-      const events = client.messages.stream(req as never) as AsyncIterable<{
+    async *stream(req, options) {
+      const events = client.messages.stream(
+        req as never,
+        options?.signal ? { signal: options.signal } : undefined,
+      ) as AsyncIterable<{
         type?: string;
         delta?: { type?: string; text?: string };
         message?: { usage?: LlmUsage };
