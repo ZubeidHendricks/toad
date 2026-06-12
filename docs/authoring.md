@@ -181,8 +181,9 @@ THE .agent FORMAT (indentation is 2 spaces, never tabs):
   uses[N]: <a>,<b>         optional. sub-agents used as tools
   temperature: <number>    optional. sampling temperature, 0 to 1
 
-TYPES: string | number | boolean, or a quoted object type "{a:string;b:number}".
-Append [] for an array (string[], "{...}[]"). Read object fields with x.field.
+TYPES: string | number | boolean, an enum of literal values (draft|final), or a
+quoted object type "{a:string;b:number}". Append [] for an array (string[],
+"{...}[]"). Read object fields with x.field.
 A trailing ? on a field name (detail?,string) makes it optional — omitted
 optionals interpolate as empty, iterate as an empty list, and test false in #if.
 

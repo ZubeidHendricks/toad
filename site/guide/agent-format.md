@@ -30,7 +30,15 @@ A header's count must match its rows: `inputs[2]{...}` has exactly two rows; `to
 
 ## Types
 
-`string`, `number`, `boolean`, or a quoted object type like `"{title:string;score:number}"`. Append `[]` for an array (`string[]`, or `"{...}[]"`). Read object fields with `{inputs.x.field}` or, in a loop, `{item.field}`.
+`string`, `number`, `boolean`, an **enum** of literal values (`draft|final`), or a quoted object type like `"{title:string;score:number}"`. Append `[]` for an array (`string[]`, or `"{...}[]"`). Read object fields with `{inputs.x.field}` or, in a loop, `{item.field}`.
+
+Enums compile to TypeScript string-literal unions and `z.enum([...])` — the literal set reaches the model through the schema, which makes structured outputs markedly more reliable than a free `string`:
+
+```agent
+outputs[2]{name,type}:
+  verdict,approve|reject|escalate
+  reason,string
+```
 
 A trailing `?` on a field name marks it **optional** — the generated TypeScript types it `field?:` and the zod schema gets `.optional()`. Omitted optionals interpolate as empty, iterate as an empty list (so `{:else}` renders), and test false in `{#if}`:
 

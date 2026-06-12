@@ -19,7 +19,8 @@ outputs[2]{name,type}:
 
 ## What you get
 
-- Highlighting for keys, `[N]` length markers, `{name,type}` tabular headers, and types
+- **Live diagnostics from the real compiler** — the actual `toac` compiler is bundled in and validates as you type: count mismatches, unknown keys, type errors, undeclared `{inputs.x}` references, unclosed blocks — each with its `TOAxxx` code at the right line
+- Highlighting for keys, `[N]` length markers, `{name,type}` tabular headers, types (including enums like `draft|final` and optional `field?` markers)
 - Template-language highlighting: `{inputs.x}` / `{env.X}` interpolation, `{#each}` loops, `{#if}` conditionals, `{{` literal braces
 - Sensible editing defaults: `#` comments, brace pairs, auto-indent after `prompt: |` and tabular headers
 
@@ -31,4 +32,4 @@ outputs[2]{name,type}:
 
 ## Roadmap
 
-In-editor diagnostics from `toac check` (the compiler already produces located `file:line:col` diagnostics). Issues and PRs welcome at [ZubeidHendricks/toad](https://github.com/ZubeidHendricks/toad).
+Hover docs for keys, completions for declared inputs in templates, and a full LSP. Issues and PRs welcome at [ZubeidHendricks/toad](https://github.com/ZubeidHendricks/toad).

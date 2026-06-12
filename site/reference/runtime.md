@@ -55,6 +55,8 @@ const agent = createAgent({
 interface Agent<I, O> {
   readonly name: string;
   run(inputs: I): Promise<O>;
+  /** Start a multi-turn conversation that keeps history between sends. */
+  session(inputs: I): AgentSession<O>;
   /** Stream the model's text for the prompt (no tools / structured output). */
   stream(inputs: I): AsyncIterable<string>;
   /** Expose this agent as a tool that another agent can call. */
@@ -68,6 +70,24 @@ for await (const delta of agent.stream({ text: "..." })) {
   process.stdout.write(delta);
 }
 ```
+
+## Sessions: multi-turn conversations {#sessions}
+
+`run()` is one-shot. `session()` keeps the conversation — including tool calls and results — so follow-ups have full context, and the cached system/tools prefix keeps paying off across sends:
+
+```ts
+const session = researcher.session({ topic: "TOON adoption" });
+
+const first = await session.send();                  // runs the rendered prompt
+const more = await session.send("Now focus on npm download trends.");
+
+session.messages; // the conversation so far (snapshot)
+session.usage;    // cumulative TokenUsage for the session
+```
+
+- The **first** `send()` sends the rendered prompt (an optional argument is appended to it); afterwards `send(message)` requires the message.
+- Each send runs the full tool-use loop with a fresh `maxTurns` budget and returns the same typed result as `run()` — with `outputs` declared, every send returns a validated object.
+- `run(inputs)` is exactly `session(inputs).send()`.
 
 ## `defineTool()`
 

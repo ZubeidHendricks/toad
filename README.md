@@ -62,6 +62,7 @@ type-checked template language:
 | Conditionals    | `{#if inputs.verbose}…{:else if inputs.brief}…{:else}…{/if}` |
 | Literal braces  | `{{` and `}}`                                                |
 | Optional inputs | `detail?,string` (omitted → empty / empty list / false)      |
+| Enum types      | `verdict,approve\|reject` → literal union + `z.enum`         |
 
 Types are `string` / `number` / `boolean`, a quoted object like
 `"{a:string;b:number}"`, and any of those with `[]`. Every reference is validated
@@ -75,6 +76,8 @@ The generated agent runs a tool-use loop over the Anthropic API with:
 - **Composition** — use one agent as another's tool (`uses:` or `agent.asTool()`).
 - **Lifecycle** — `retries`, `maxTurns`, and `onToolCall` / `onToolResult` /
   `onError` hooks.
+- **Sessions** — `agent.session(inputs)` keeps multi-turn conversation history
+  (tool calls included), with typed results per send.
 - **Streaming** — `agent.stream(inputs)` yields text deltas.
 - **Token accounting** — the `onUsage` hook reports per-call and cumulative
   usage, including prompt-cache reads/writes; same-turn tool calls run

@@ -138,18 +138,28 @@ function emitSchema(lines: string[], name: string, fields: FieldDecl[]): void {
 }
 
 function tsType(t: ToaType): string {
-  const base =
-    t.base === "object"
-      ? `{ ${(t.fields ?? []).map((f) => `${f.name}: ${tsType(f.type)}`).join("; ")} }`
-      : t.base;
+  let base: string;
+  if (t.base === "object") {
+    base = `{ ${(t.fields ?? []).map((f) => `${f.name}: ${tsType(f.type)}`).join("; ")} }`;
+  } else if (t.base === "enum") {
+    base = (t.values ?? []).map((v) => JSON.stringify(v)).join(" | ");
+    // A union needs parens before `[]` to mean (a | b)[] rather than a | b[].
+    if (t.array) base = `(${base})`;
+  } else {
+    base = t.base;
+  }
   return t.array ? `${base}[]` : base;
 }
 
 function zodExpr(t: ToaType): string {
-  const base =
-    t.base === "object"
-      ? `z.object({ ${(t.fields ?? []).map((f) => `${f.name}: ${zodExpr(f.type)}`).join(", ")} })`
-      : `z.${t.base}()`;
+  let base: string;
+  if (t.base === "object") {
+    base = `z.object({ ${(t.fields ?? []).map((f) => `${f.name}: ${zodExpr(f.type)}`).join(", ")} })`;
+  } else if (t.base === "enum") {
+    base = `z.enum([${(t.values ?? []).map((v) => JSON.stringify(v)).join(", ")}])`;
+  } else {
+    base = `z.${t.base}()`;
+  }
   return t.array ? `z.array(${base})` : base;
 }
 

@@ -16,7 +16,8 @@
     "build:site": "esbuild packages/compiler/dist/index.js --bundle --format=esm --outfile=site/public/toad-compiler.js && esbuild scripts/tokenizer-entry.mjs --bundle --format=esm --outfile=site/public/toad-tokenizer.js && node scripts/gen-llms.mjs",
     "site:dev": "pnpm build:site && vitepress dev site",
     "site:build": "pnpm build:site && vitepress build site",
-    "site:preview": "vitepress preview site"
+    "site:preview": "vitepress preview site",
+    "build:vscode": "esbuild editors/vscode/src/extension.mjs --bundle --external:vscode --format=cjs --platform=node --outfile=editors/vscode/out/extension.js"
   },
   "devDependencies": {
     "@types/node": "catalog:",

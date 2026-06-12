@@ -96,14 +96,16 @@ Sampling temperature, a number in `[0, 1]`. When absent, the model provider's de
 
 ```
 type      = base [ "[]" ]
-base      = "string" | "number" | "boolean" | objectType
+base      = "string" | "number" | "boolean" | enumType | objectType
+enumType  = enumValue ( "|" enumValue )+
+enumValue = [A-Za-z0-9_-]+
 objectType = '"' "{" field ( ";" field )* "}" [ "[]" ] '"'
 field     = identifier ":" type
 ```
 
-Examples: `string`, `number`, `boolean`, `string[]`, `"{title:string;url:string}"`, `"{title:string;score:number}[]"`.
+Examples: `string`, `number`, `boolean`, `string[]`, `draft|final`, `"{title:string;url:string}"`, `"{title:string;status:open|closed}[]"`.
 
-Object types MUST be quoted (they contain TOON-significant characters). A trailing `[]` denotes an array of the preceding type.
+An enum type lists two or more distinct literal string values; the field's value MUST be one of them, and conforming compilers MUST emit the literal set into the generated schema (it reaches the model via the tool's JSON schema). Object types MUST be quoted (they contain TOON-significant characters). A trailing `[]` denotes an array of the preceding type.
 
 ## 6. The template language
 

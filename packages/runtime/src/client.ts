@@ -55,9 +55,15 @@ export interface LlmResponse {
   usage?: LlmUsage;
 }
 
-/** A streamed text delta from the model. */
+/** A streamed text delta and/or usage update from the model. */
 export interface LlmStreamChunk {
   text?: string;
+  /**
+   * Usage so far, when the provider reports it (`message_start` carries the
+   * input side; `message_delta` carries the cumulative output side). Fields
+   * are cumulative — consumers should merge by taking maxima, not summing.
+   */
+  usage?: LlmUsage;
 }
 
 export interface LlmClient {
@@ -93,6 +99,8 @@ export function anthropicClient(options?: { apiKey?: string }): LlmClient {
       const events = client.messages.stream(req as never) as AsyncIterable<{
         type?: string;
         delta?: { type?: string; text?: string };
+        message?: { usage?: LlmUsage };
+        usage?: LlmUsage;
       }>;
       for await (const event of events) {
         if (
@@ -101,6 +109,16 @@ export function anthropicClient(options?: { apiKey?: string }): LlmClient {
           typeof event.delta.text === "string"
         ) {
           yield { text: event.delta.text };
+        } else if (
+          event.type === "message_start" &&
+          event.message?.usage !== undefined
+        ) {
+          yield { usage: event.message.usage };
+        } else if (
+          event.type === "message_delta" &&
+          event.usage !== undefined
+        ) {
+          yield { usage: event.usage };
         }
       }
     },

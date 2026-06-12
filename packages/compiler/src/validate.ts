@@ -534,6 +534,8 @@ function validatePromptSegments(
   }
 }
 
+const ENUM_VALUE = /^[A-Za-z0-9_-]+$/;
+
 function parseType(raw: string): ToaType | undefined {
   let rest = raw.trim();
   let array = false;
@@ -543,6 +545,17 @@ function parseType(raw: string): ToaType | undefined {
   }
   if (rest === "string" || rest === "number" || rest === "boolean") {
     return { base: rest, array };
+  }
+  // Enum: pipe-separated literal values, e.g. `draft|final` (2+ values).
+  if (!rest.startsWith("{") && rest.includes("|")) {
+    const values = rest.split("|").map((v) => v.trim());
+    if (values.length < 2 || !values.every((v) => ENUM_VALUE.test(v))) {
+      return undefined;
+    }
+    if (new Set(values).size !== values.length) {
+      return undefined;
+    }
+    return { base: "enum", array, values };
   }
   if (rest.startsWith("{") && rest.endsWith("}")) {
     const fields: FieldDecl[] = [];

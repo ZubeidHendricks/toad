@@ -3,13 +3,15 @@
  * build against. See `_bmad-output/architecture.md` §4.
  */
 
-export type ToaTypeBase = "string" | "number" | "boolean" | "object";
+export type ToaTypeBase = "string" | "number" | "boolean" | "object" | "enum";
 
 export interface ToaType {
   base: ToaTypeBase;
   array: boolean;
   /** Field declarations, present when `base` is "object". */
   fields?: FieldDecl[];
+  /** Literal values, present when `base` is "enum" (`"draft|final"`). */
+  values?: string[];
 }
 
 export interface FieldDecl {

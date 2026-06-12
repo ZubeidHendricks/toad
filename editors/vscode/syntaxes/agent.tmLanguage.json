@@ -85,6 +85,14 @@
           }
         },
         {
+          "match": "[A-Za-z0-9_-]+(?:\\s*(\\|)\\s*[A-Za-z0-9_-]+)+(\\[\\])?",
+          "name": "constant.other.enum.agent",
+          "captures": {
+            "1": { "name": "keyword.operator.union.agent" },
+            "2": { "name": "keyword.operator.array.agent" }
+          }
+        },
+        {
           "begin": "\"",
           "end": "\"",
           "name": "string.quoted.double.type.agent",

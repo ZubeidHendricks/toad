@@ -13,6 +13,7 @@ export {
   type Agent,
   type AgentConfig,
   type AgentHooks,
+  type AgentSession,
   type TokenUsage,
   type ToolResultEncoding,
 } from "./agent.js";

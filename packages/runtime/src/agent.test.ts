@@ -584,3 +584,195 @@ describe("temperature", () => {
     expect(captured !== undefined && "temperature" in captured).toBe(false);
   });
 });
+
+describe("agent.session() — multi-turn conversations", () => {
+  it("keeps history across sends", async () => {
+    const requests: LlmRequest[] = [];
+    const client: LlmClient = {
+      create: async (req) => {
+        // Snapshot — the runtime keeps appending to the live messages array.
+        requests.push({ ...req, messages: [...req.messages] });
+        return {
+          stop_reason: "end_turn",
+          content: [{ type: "text", text: `reply ${requests.length}` }],
+        };
+      },
+    };
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      prompt: (i: { topic: string }) => `Research ${i.topic}`,
+      client,
+    });
+    const session = agent.session({ topic: "frogs" });
+    expect(await session.send()).toBe("reply 1");
+    expect(await session.send("now summarize")).toBe("reply 2");
+
+    // The second request carries the whole conversation.
+    const m = requests[1]!.messages;
+    expect(m).toHaveLength(3);
+    expect(m[0]!.role).toBe("user");
+    expect(JSON.stringify(m[0]!.content)).toContain("Research frogs");
+    expect(m[1]!.role).toBe("assistant");
+    expect(m[2]).toEqual({ role: "user", content: "now summarize" });
+    expect(session.messages).toHaveLength(4);
+  });
+
+  it("appends a first-call message to the rendered prompt", async () => {
+    let captured: LlmRequest | undefined;
+    const client: LlmClient = {
+      create: async (req) => {
+        captured = req;
+        return {
+          stop_reason: "end_turn",
+          content: [{ type: "text", text: "ok" }],
+        };
+      },
+    };
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      prompt: () => "BASE",
+      client,
+    });
+    await agent.session({}).send("EXTRA");
+    expect(captured!.messages[0]!.content).toBe("BASE\n\nEXTRA");
+  });
+
+  it("requires a message after the first send", async () => {
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      prompt: () => "go",
+      client: scriptedClient([
+        { stop_reason: "end_turn", content: [{ type: "text", text: "ok" }] },
+      ]),
+    });
+    const session = agent.session({});
+    await session.send();
+    await expect(session.send()).rejects.toThrow(/needs a message/);
+  });
+
+  it("runs tools mid-session and pairs respond with a tool_result", async () => {
+    const search = defineTool({
+      description: "search",
+      input: z.object({ q: z.string() }),
+      run: ({ q }) => `results for ${q}`,
+    });
+    const client = scriptedClient([
+      {
+        stop_reason: "tool_use",
+        content: [
+          { type: "tool_use", id: "t1", name: "search", input: { q: "x" } },
+        ],
+      },
+      {
+        stop_reason: "tool_use",
+        content: [
+          { type: "tool_use", id: "r1", name: "respond", input: { a: "one" } },
+        ],
+      },
+      {
+        stop_reason: "tool_use",
+        content: [
+          { type: "tool_use", id: "r2", name: "respond", input: { a: "two" } },
+        ],
+      },
+    ]);
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      tools: { search },
+      outputSchema: z.object({ a: z.string() }),
+      prompt: () => "go",
+      client,
+    });
+    const session = agent.session({});
+    expect(await session.send()).toEqual({ a: "one" });
+    // History ends with the respond acknowledged, so the next send is valid.
+    const tail = session.messages[session.messages.length - 1]!;
+    expect(tail.role).toBe("user");
+    expect(JSON.stringify(tail.content)).toContain("r1");
+    expect(await session.send("again")).toEqual({ a: "two" });
+  });
+
+  it("accumulates usage across sends on session.usage", async () => {
+    const client = scriptedClient([
+      {
+        stop_reason: "end_turn",
+        content: [{ type: "text", text: "a" }],
+        usage: { input_tokens: 10, output_tokens: 5 },
+      },
+      {
+        stop_reason: "end_turn",
+        content: [{ type: "text", text: "b" }],
+        usage: {
+          input_tokens: 20,
+          output_tokens: 7,
+          cache_read_input_tokens: 9,
+        },
+      },
+    ]);
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      prompt: () => "go",
+      client,
+    });
+    const session = agent.session({});
+    await session.send();
+    await session.send("more");
+    expect(session.usage).toEqual({
+      inputTokens: 30,
+      outputTokens: 12,
+      cacheReadTokens: 9,
+      cacheWriteTokens: 0,
+    });
+  });
+});
+
+describe("stream usage", () => {
+  it("reports merged usage via onUsage when the stream ends", async () => {
+    const events: unknown[] = [];
+    const client: LlmClient = {
+      create: async () => ({ stop_reason: "end_turn", content: [] }),
+      async *stream() {
+        yield {
+          usage: {
+            input_tokens: 40,
+            output_tokens: 1,
+            cache_read_input_tokens: 30,
+          },
+        };
+        yield { text: "Hello" };
+        yield { usage: { input_tokens: 0, output_tokens: 12 } };
+      },
+    };
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      prompt: () => "hi",
+      client,
+      hooks: { onUsage: (turn, total) => events.push({ turn, total }) },
+    });
+    let out = "";
+    for await (const chunk of agent.stream({})) out += chunk;
+    expect(out).toBe("Hello");
+    expect(events).toEqual([
+      {
+        turn: {
+          inputTokens: 40,
+          outputTokens: 12,
+          cacheReadTokens: 30,
+          cacheWriteTokens: 0,
+        },
+        total: {
+          inputTokens: 40,
+          outputTokens: 12,
+          cacheReadTokens: 30,
+          cacheWriteTokens: 0,
+        },
+      },
+    ]);
+  });
+});

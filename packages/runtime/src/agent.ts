@@ -95,9 +95,29 @@ export interface AgentConfig<I, O> {
   client?: LlmClient;
 }
 
+/**
+ * A multi-turn conversation with an agent. Each `send()` runs the full
+ * tool-use loop and the conversation (including tool calls and results)
+ * carries over to the next send, so the model keeps its context.
+ */
+export interface AgentSession<O = string> {
+  /**
+   * Send the next user message. On the first call the rendered prompt is
+   * sent (an optional `message` is appended to it); afterwards `message` is
+   * required. Returns the typed result, exactly like `run()`.
+   */
+  send(message?: string): Promise<O>;
+  /** A snapshot of the conversation so far. */
+  readonly messages: readonly LlmMessage[];
+  /** Cumulative token usage for the session (zeros if the client reports none). */
+  readonly usage: TokenUsage;
+}
+
 export interface Agent<I, O> {
   readonly name: string;
   run(inputs: I): Promise<O>;
+  /** Start a multi-turn conversation that keeps history between sends. */
+  session(inputs: I): AgentSession<O>;
   /** Stream the model's text for the prompt (no tools / structured output). */
   stream(inputs: I): AsyncIterable<string>;
   /** Expose this agent as a tool that another agent can call. */
@@ -139,36 +159,54 @@ export function createAgent<I, O = string>(
       ? config.system(inputs)
       : (config.description ?? `You are ${config.name}.`);
 
-  const agent: Agent<I, O> = {
-    name: config.name,
-    async run(inputs: I): Promise<O> {
-      const client = config.client ?? anthropicClient();
-      const hooks = config.hooks;
-      const attempts = (config.retries ?? 0) + 1;
-      const callModel = async (req: LlmRequest): Promise<LlmResponse> => {
-        let lastError: unknown;
-        for (let attempt = 0; attempt < attempts; attempt++) {
-          try {
-            return await client.create(req);
-          } catch (error) {
-            lastError = error;
-            hooks?.onError?.(error);
-          }
+  const makeSession = (inputs: I): AgentSession<O> => {
+    const client = config.client ?? anthropicClient();
+    const hooks = config.hooks;
+    const attempts = (config.retries ?? 0) + 1;
+    const callModel = async (req: LlmRequest): Promise<LlmResponse> => {
+      let lastError: unknown;
+      for (let attempt = 0; attempt < attempts; attempt++) {
+        try {
+          return await client.create(req);
+        } catch (error) {
+          lastError = error;
+          hooks?.onError?.(error);
         }
-        throw lastError;
-      };
-      let userText = config.prompt(inputs);
+      }
+      throw lastError;
+    };
+
+    const messages: LlmMessage[] = [];
+    const total: TokenUsage = {
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+    };
+    let started = false;
+
+    const send = async (message?: string): Promise<O> => {
+      let userText: string;
+      if (!started) {
+        started = true;
+        userText = config.prompt(inputs);
+        if (message !== undefined) {
+          userText += `\n\n${message}`;
+        }
+      } else {
+        if (message === undefined) {
+          throw new Error(
+            `agent "${config.name}": session.send() needs a message after the first turn`,
+          );
+        }
+        userText = message;
+      }
       if (config.outputSchema) {
         userText += `\n\nWhen finished, call the \`${RESPOND_TOOL}\` tool with the final result.`;
       }
-      const messages: LlmMessage[] = [{ role: "user", content: userText }];
-      const total: TokenUsage = {
-        inputTokens: 0,
-        outputTokens: 0,
-        cacheReadTokens: 0,
-        cacheWriteTokens: 0,
-      };
+      messages.push({ role: "user", content: userText });
 
+      // Each send gets a fresh turn budget; the conversation carries over.
       for (let turn = 0; turn < maxTurns; turn++) {
         const req: LlmRequest = {
           model: config.model,
@@ -201,11 +239,15 @@ export function createAgent<I, O = string>(
               `agent "${config.name}" stopped without calling ${RESPOND_TOOL}`,
             );
           }
+          // Record the reply so a later send() continues the conversation.
+          messages.push({ role: "assistant", content: res.content });
           return joinText(res.content) as O;
         }
 
-        // Structured output ends the run; the model is done, so any sibling
-        // tool calls in the same turn are moot and are not executed.
+        // Structured output ends the send; the model is done, so any sibling
+        // tool calls in the same turn are moot and are not executed. The
+        // respond call is acknowledged in history (a tool_use must be paired
+        // with a tool_result) so the session stays valid for the next send.
         if (config.outputSchema) {
           const respond = toolUses.find((tu) => tu.name === RESPOND_TOOL);
           if (respond !== undefined) {
@@ -215,6 +257,11 @@ export function createAgent<I, O = string>(
                 `agent "${config.name}" returned invalid output: ${parsed.error.message}`,
               );
             }
+            messages.push({ role: "assistant", content: res.content });
+            messages.push({
+              role: "user",
+              content: [toolResult(respond.id, "delivered")],
+            });
             return parsed.data;
           }
         }
@@ -265,6 +312,26 @@ export function createAgent<I, O = string>(
       }
 
       throw new MaxTurnsError(maxTurns);
+    };
+
+    return {
+      send,
+      get messages(): readonly LlmMessage[] {
+        return [...messages];
+      },
+      get usage(): TokenUsage {
+        return { ...total };
+      },
+    };
+  };
+
+  const agent: Agent<I, O> = {
+    name: config.name,
+    run(inputs: I): Promise<O> {
+      return makeSession(inputs).send();
+    },
+    session(inputs: I): AgentSession<O> {
+      return makeSession(inputs);
     },
     stream(inputs: I): AsyncIterable<string> {
       const client = config.client ?? anthropicClient();
@@ -290,10 +357,42 @@ export function createAgent<I, O = string>(
         if (config.temperature !== undefined) {
           req.temperature = config.temperature;
         }
+        // Stream usage arrives in cumulative pieces (input side at start,
+        // output side as deltas) — merge by maxima, report once at the end.
+        const usage: TokenUsage = {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
+        };
+        let sawUsage = false;
         for await (const chunk of client.stream(req)) {
           if (chunk.text !== undefined) {
             yield chunk.text;
           }
+          if (chunk.usage !== undefined) {
+            sawUsage = true;
+            const u = chunk.usage;
+            usage.inputTokens = Math.max(
+              usage.inputTokens,
+              u.input_tokens ?? 0,
+            );
+            usage.outputTokens = Math.max(
+              usage.outputTokens,
+              u.output_tokens ?? 0,
+            );
+            usage.cacheReadTokens = Math.max(
+              usage.cacheReadTokens,
+              u.cache_read_input_tokens ?? 0,
+            );
+            usage.cacheWriteTokens = Math.max(
+              usage.cacheWriteTokens,
+              u.cache_creation_input_tokens ?? 0,
+            );
+          }
+        }
+        if (sawUsage) {
+          config.hooks?.onUsage?.({ ...usage }, { ...usage });
         }
       }
       return generate();
