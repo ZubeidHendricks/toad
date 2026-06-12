@@ -13,7 +13,10 @@
     "typecheck": "turbo run typecheck",
     "lint": "prettier --check .",
     "format": "prettier --write .",
-    "build:site": "esbuild packages/compiler/dist/index.js --bundle --format=esm --outfile=site/toad-compiler.js && esbuild scripts/tokenizer-entry.mjs --bundle --format=esm --outfile=site/toad-tokenizer.js"
+    "build:site": "esbuild packages/compiler/dist/index.js --bundle --format=esm --outfile=site/public/toad-compiler.js && esbuild scripts/tokenizer-entry.mjs --bundle --format=esm --outfile=site/public/toad-tokenizer.js",
+    "site:dev": "pnpm build:site && vitepress dev site",
+    "site:build": "pnpm build:site && vitepress build site",
+    "site:preview": "vitepress preview site"
   },
   "devDependencies": {
     "@types/node": "catalog:",
@@ -22,7 +25,9 @@
     "prettier": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitepress": "^1.6.4",
+    "vitest": "catalog:",
+    "vue": "^3.5.38"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

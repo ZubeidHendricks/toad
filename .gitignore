@@ -6,5 +6,7 @@ dist/
 .env.*
 .DS_Store
 .tmp-*.mjs
-site/toad-compiler.js
-site/toad-tokenizer.js
+site/public/toad-compiler.js
+site/public/toad-tokenizer.js
+site/.vitepress/dist/
+site/.vitepress/cache/
