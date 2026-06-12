@@ -3,7 +3,7 @@ import { compile, COMPILER_VERSION } from "./index.js";
 
 describe("toad-compiler", () => {
   it("exposes a version", () => {
-    expect(COMPILER_VERSION).toBe("0.1.0");
+    expect(COMPILER_VERSION).toBe("0.2.0");
   });
 
   it("returns diagnostics (and no code) for an invalid agent", () => {

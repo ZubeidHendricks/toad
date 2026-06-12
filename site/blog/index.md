@@ -2,6 +2,23 @@
 
 What's new in TOAD. Follow along on [GitHub releases](https://github.com/ZubeidHendricks/toad/releases).
 
+## TOAD 0.2.0 — the standard takes shape {#v0-2-0}
+
+_June 12, 2026_
+
+This release is about making `.agent` a format you can target, not just a tool you can run:
+
+- **[The `.agent` specification](/reference/spec)** — versioned and normative ([`SPEC.md`](https://github.com/ZubeidHendricks/toad/blob/main/SPEC.md)). If you're building tooling on the format, this is your contract.
+- **`toac init <name>`** — scaffold a starter `<name>.agent` + `<name>.tools.ts` pair in one command.
+- **A real `.agent` grammar** — a TextMate grammar drives both this site's syntax highlighting and a new **[VS Code extension](https://github.com/ZubeidHendricks/toad/tree/main/editors/vscode)**.
+- **A new site** — full-text search, a [playground](/playground) running the real compiler in your browser, and **[measured benchmarks](/benchmarks)**: `.agent` is 30–38% fewer tokens than equivalent JSON; TOON tool results save 33–39% on tabular data.
+- **[llms.txt](https://zubeidhendricks.github.io/toad/llms.txt)** — the docs, agent-readable. A token-oriented framework should practice what it preaches.
+
+```bash
+npm i -g toad-compiler@0.2.0
+toac init scout && toac build scout.agent
+```
+
 ## TOAD 0.1.0 — the first release {#v0-1-0}
 
 _May 27, 2026_
