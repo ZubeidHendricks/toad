@@ -8,7 +8,7 @@ npm i toad-runtime @anthropic-ai/sdk
 
 ## The tool-use loop
 
-The generated agent runs a tool-use loop over the Anthropic API: send the prompt, execute any requested tools, feed results back, repeat until the model finishes (or calls the internal `respond` tool for structured output).
+The generated agent runs a tool-use loop over the Anthropic API: send the prompt, execute any requested tools, feed results back, repeat until the model finishes (or calls the internal `respond` tool for structured output). When the model requests several tools in one turn, they run **concurrently**; results go back in the model's request order. The system prompt and tool definitions carry `cache_control` breakpoints, so the stable prefix is served from the prompt cache on every turn after the first.
 
 <Mermaid name="tool-loop" />
 
@@ -43,6 +43,7 @@ const agent = createAgent({
 | `system`           | `((inputs: I) => string)?`        | system prompt; defaults to the description                    |
 | `maxTurns`         | `number?` (default 8)             | tool-use turn cap                                             |
 | `maxTokens`        | `number?` (default 4096)          | per-call token cap                                            |
+| `temperature`      | `number?` (0–1)                   | sampling temperature; omitted = API default                   |
 | `retries`          | `number?`                         | retry the model call on error                                 |
 | `toolResultFormat` | `"json" \| "toon" \| "auto"`      | how non-string tool results are serialized (see below)        |
 | `hooks`            | `AgentHooks?`                     | observability / guardrail hooks                               |
@@ -82,6 +83,29 @@ export const web_search = defineTool({
   run: async ({ query }) => `results for ${query}`,
 });
 ```
+
+## Token usage accounting {#usage}
+
+The runtime is named for tokens, so it measures them. The `onUsage` hook fires after every model response with that call's usage and the cumulative total for the run — including what prompt caching saved:
+
+```ts
+import { createAgent, type TokenUsage } from "toad-runtime";
+
+const agent = createAgent({
+  // ...
+  hooks: {
+    onUsage: (turn: TokenUsage, total: TokenUsage) => {
+      console.log(
+        `turn: ${turn.inputTokens} in / ${turn.outputTokens} out`,
+        `(cache read ${turn.cacheReadTokens})`,
+        `run total: ${total.inputTokens + total.outputTokens}`,
+      );
+    },
+  },
+});
+```
+
+`cacheReadTokens` are input tokens served from the prompt cache at a fraction of the input price — in a multi-turn tool loop that's most of the system prompt and tool definitions from turn two onward.
 
 ## Token-efficient tool results {#toon-serialization}
 
@@ -134,7 +158,7 @@ The sub-agent's typed `inputSchema` becomes the tool's input schema automaticall
 
 ## Lifecycle & errors
 
-- **Hooks** — `onToolCall`, `onToolResult`, `onToolResultEncoded`, `onError`.
+- **Hooks** — `onToolCall`, `onToolResult`, `onToolResultEncoded`, `onUsage`, `onError`.
 - **`retries`** — retry the model call on transient errors.
 - **`maxTurns`** — cap the tool-use loop; exceeding it throws `MaxTurnsError`.
 - **Typed errors** — `MaxTurnsError`, `OutputParseError` (structured output failed validation), `ToolError` (a tool body threw).

@@ -15,6 +15,8 @@ export interface ToaType {
 export interface FieldDecl {
   name: string;
   type: ToaType;
+  /** Declared with a trailing `?` (`name?,type`) — may be omitted. */
+  optional?: boolean;
 }
 
 /** The binding of an `{#each}` loop: a single name or a destructure pattern. */
@@ -59,4 +61,6 @@ export interface AgentAst {
   maxTurns?: number;
   /** Retries for the model call on error. */
   retries?: number;
+  /** Sampling temperature (0–1); omitted = the API default. */
+  temperature?: number;
 }

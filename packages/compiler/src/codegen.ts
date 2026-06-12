@@ -20,6 +20,9 @@ export function generate(ast: AgentAst): string {
   // Object]`. Scalar interpolations stay byte-identical to plain `${...}`.
   const ctx: EmitCtx = {
     inputTypes: new Map(ast.inputs.map((f) => [f.name, f.type])),
+    optionalInputs: new Set(
+      ast.inputs.filter((f) => f.optional === true).map((f) => f.name),
+    ),
     usesToon: false,
   };
   const promptCode = promptExpr(ast.prompt, ctx, new Map());
@@ -76,6 +79,9 @@ export function generate(ast: AgentAst): string {
   if (ast.retries !== undefined) {
     lines.push(`  retries: ${ast.retries},`);
   }
+  if (ast.temperature !== undefined) {
+    lines.push(`  temperature: ${ast.temperature},`);
+  }
   const toolEntries = [
     ...ast.tools,
     ...ast.uses.map((sub) => `${sub}: ${sub}.asTool()`),
@@ -113,7 +119,9 @@ function emitInterface(
   }
   lines.push(`export interface ${name} {`);
   for (const f of fields) {
-    lines.push(`  ${f.name}: ${tsType(f.type)};`);
+    lines.push(
+      `  ${f.name}${f.optional === true ? "?" : ""}: ${tsType(f.type)};`,
+    );
   }
   lines.push(`}`);
 }
@@ -121,7 +129,10 @@ function emitInterface(
 function emitSchema(lines: string[], name: string, fields: FieldDecl[]): void {
   lines.push(`const ${name} = z.object({`);
   for (const f of fields) {
-    lines.push(`  ${f.name}: ${zodExpr(f.type)},`);
+    const expr = zodExpr(f.type);
+    lines.push(
+      `  ${f.name}: ${f.optional === true ? `${expr}.optional()` : expr},`,
+    );
   }
   lines.push(`});`);
 }
@@ -145,7 +156,27 @@ function zodExpr(t: ToaType): string {
 /** Codegen context: declared input types, and whether `toonValue` was emitted. */
 interface EmitCtx {
   inputTypes: Map<string, ToaType>;
+  /** Inputs declared with a trailing `?` — may be `undefined` at runtime. */
+  optionalInputs: Set<string>;
   usesToon: boolean;
+}
+
+/** Whether a path roots at an optional input (`{inputs.x…}` with `x?,…`). */
+function isOptionalInputRoot(path: string[], ctx: EmitCtx): boolean {
+  return (
+    path[0] === "inputs" && path.length >= 2 && ctx.optionalInputs.has(path[1]!)
+  );
+}
+
+/**
+ * The emitted expression for a path. Paths through an optional input use `?.`
+ * after the root so field access stays safe when the input is omitted.
+ */
+function pathExpr(path: string[], ctx: EmitCtx): string {
+  if (isOptionalInputRoot(path, ctx) && path.length > 2) {
+    return `inputs.${path[1]}?.${path.slice(2).join(".")}`;
+  }
+  return path.join(".");
 }
 
 /** Walk a dotted path through object fields; returns the resolved type or null. */
@@ -201,12 +232,16 @@ function segmentsToBody(
       if (seg.path[0] === "env") {
         out += `\${process.env.${seg.path.slice(1).join(".")} ?? ""}`;
       } else {
-        const expr = seg.path.join(".");
+        const expr = pathExpr(seg.path, ctx);
         const type = interpType(seg.path, ctx, vars);
-        // Non-scalar values (objects/arrays) render as TOON; scalars stay plain.
+        // Non-scalar values (objects/arrays) render as TOON; scalars stay
+        // plain. Optional scalars render as "" when omitted (toonValue already
+        // renders undefined as "" for the non-scalar case).
         if (type !== null && isNonScalar(type)) {
           ctx.usesToon = true;
           out += `\${toonValue(${expr})}`;
+        } else if (isOptionalInputRoot(seg.path, ctx)) {
+          out += `\${${expr} ?? ""}`;
         } else {
           out += `\${${expr}}`;
         }
@@ -218,12 +253,16 @@ function segmentsToBody(
           : `{ ${seg.item.fields.join(", ")} }`;
       const params = seg.index !== undefined ? `${bind}, ${seg.index}` : bind;
       // Bind the loop variable(s) so references inside the body resolve their
-      // types (and so object elements render as TOON).
+      // types (and so object elements render as TOON). An optional array input
+      // iterates as empty when omitted.
       const childVars = bindLoopVars(seg, ctx, vars);
-      const loop = `${seg.source.join(".")}.map((${params}) => \`${segmentsToBody(seg.body, ctx, childVars)}\`).join("")`;
+      const src = isOptionalInputRoot(seg.source, ctx)
+        ? `(${seg.source.join(".")} ?? [])`
+        : seg.source.join(".");
+      const loop = `${src}.map((${params}) => \`${segmentsToBody(seg.body, ctx, childVars)}\`).join("")`;
       out +=
         seg.else !== undefined && seg.else.length > 0
-          ? `\${${seg.source.join(".")}.length > 0 ? ${loop} : \`${segmentsToBody(seg.else, ctx, vars)}\`}`
+          ? `\${${src}.length > 0 ? ${loop} : \`${segmentsToBody(seg.else, ctx, vars)}\`}`
           : `\${${loop}}`;
     } else {
       const cond = `${seg.negate ? "!" : ""}${seg.cond.join(".")}`;

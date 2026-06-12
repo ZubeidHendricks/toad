@@ -22,6 +22,7 @@ Real logic (what a tool actually does) lives in plain TypeScript, in a co-locate
 | `system`                | no  | `system: \|` + block            | system prompt (defaults to the description)          |
 | `uses`                  | no  | `uses[N]: a,b`                  | sub-agents wired in as tools via `asTool()`          |
 | `maxTurns` / `retries`  | no  | number                          | tool-use turn cap / model-call retries               |
+| `temperature`           | no  | number 0–1                      | sampling temperature (omit for the default)          |
 
 ::: warning Counts are checked
 A header's count must match its rows: `inputs[2]{...}` has exactly two rows; `tools[2]: a,b` lists exactly two names. The explicit `[N]` lengths are what make the format reliable for LLMs to author.
@@ -30,6 +31,14 @@ A header's count must match its rows: `inputs[2]{...}` has exactly two rows; `to
 ## Types
 
 `string`, `number`, `boolean`, or a quoted object type like `"{title:string;score:number}"`. Append `[]` for an array (`string[]`, or `"{...}[]"`). Read object fields with `{inputs.x.field}` or, in a loop, `{item.field}`.
+
+A trailing `?` on a field name marks it **optional** — the generated TypeScript types it `field?:` and the zod schema gets `.optional()`. Omitted optionals interpolate as empty, iterate as an empty list (so `{:else}` renders), and test false in `{#if}`:
+
+```agent
+inputs[2]{name,type}:
+  topic,string
+  audience?,string
+```
 
 ```agent
 inputs[3]{name,type}:

@@ -38,11 +38,14 @@ is a strict superset of [TOON](https://github.com/toon-format/toon).
 | `uses` | no | `uses[N]: a,b` | sub-agents wired in as tools via `asTool()` |
 | `maxTurns` | no | number | max tool-use turns |
 | `retries` | no | number | model-call retries |
+| `temperature` | no | number 0–1 | sampling temperature (omit for the default) |
 
 **Types:** `string`, `number`, `boolean`, or a quoted object type like
 `"{title:string;score:number}"`. Append `[]` for an array (`string[]`, or
 `"{...}[]"`). Read object fields with `{inputs.x.field}` or, in a loop,
-`{item.field}`.
+`{item.field}`. A trailing `?` on a field name (`detail?,string`) makes it
+optional — omitted optionals interpolate as empty, iterate as an empty list,
+and test false in `{#if}`.
 
 **Interpolation:** inside `prompt`, `{inputs.<name>}` inserts a declared input and
 `{env.<NAME>}` inserts an environment variable (`process.env.<NAME>`, empty string
@@ -176,9 +179,12 @@ THE .agent FORMAT (indentation is 2 spaces, never tabs):
   outputs[N]{name,type}:   optional. N typed result fields, one per indented row
   system: |                optional. a system prompt (else uses the description)
   uses[N]: <a>,<b>         optional. sub-agents used as tools
+  temperature: <number>    optional. sampling temperature, 0 to 1
 
 TYPES: string | number | boolean, or a quoted object type "{a:string;b:number}".
 Append [] for an array (string[], "{...}[]"). Read object fields with x.field.
+A trailing ? on a field name (detail?,string) makes it optional — omitted
+optionals interpolate as empty, iterate as an empty list, and test false in #if.
 
 INTERPOLATION: in the prompt, {inputs.<name>} inserts a declared input's value.
 The name must be one you declared in inputs. Use {{ and }} for literal braces.

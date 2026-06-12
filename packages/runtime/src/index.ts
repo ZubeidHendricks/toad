@@ -13,6 +13,7 @@ export {
   type Agent,
   type AgentConfig,
   type AgentHooks,
+  type TokenUsage,
   type ToolResultEncoding,
 } from "./agent.js";
 export { MaxTurnsError, OutputParseError, ToolError } from "./errors.js";
@@ -23,4 +24,5 @@ export {
   type LlmRequest,
   type LlmResponse,
   type LlmStreamChunk,
+  type LlmUsage,
 } from "./client.js";

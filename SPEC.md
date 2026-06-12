@@ -1,6 +1,6 @@
 # The `.agent` File Format Specification
 
-**Version 0.1 · Status: Draft · June 2026**
+**Version 0.2 · Status: Draft · June 2026**
 
 This document specifies the `.agent` file format used by TOAD (Token-Oriented Agentic Development): a compact, token-oriented, declarative description of an LLM agent, designed to be authored by humans and language models and compiled to typed code.
 
@@ -40,6 +40,7 @@ The decoded document MUST be an object. Its keys are:
 | `uses`        | no       | list of identifiers (§4.9)             |
 | `maxTurns`    | no       | positive integer                       |
 | `retries`     | no       | non-negative integer                   |
+| `temperature` | no       | number in [0, 1] (§4.10)               |
 
 Unknown keys MUST produce an error diagnostic.
 
@@ -65,6 +66,8 @@ One-line description. Runtimes SHOULD use it as the default system prompt and as
 
 A TOON tabular array header `inputs[N]{name,type}:` followed by exactly `N` rows of `name,type`. Per TOON, a declared length that does not match the row count is an error. Each `name` MUST be a unique identifier; each `type` MUST conform to the type grammar (§5).
 
+A trailing `?` on a name (`detail?,string`) marks the field **optional**: callers MAY omit it, and conforming compilers MUST type it as optional. Template behaviour for omitted optionals is defined in §6.
+
 ### 4.5 `tools`
 
 A TOON list `tools[N]: a,b,…` of exactly `N` unique identifiers. Tool names bind to implementations supplied at runtime (in TOAD, a co-located `<agent>.tools.ts`).
@@ -75,7 +78,7 @@ The instruction prompt. In the superset form, `prompt: |` introduces an indented
 
 ### 4.7 `outputs`
 
-Same form as `inputs`. When present, the agent's result MUST be an object with exactly these typed fields, and conforming runtimes MUST validate it.
+Same form as `inputs`, including the optional marker (`caveats?,string[]`). When present, the agent's result MUST be an object with these typed fields — optional fields MAY be omitted — and conforming runtimes MUST validate it.
 
 ### 4.8 `system`
 
@@ -84,6 +87,10 @@ Optional system prompt, same block form as `prompt`, also a template (§6). Defa
 ### 4.9 `uses`
 
 A list of sub-agent identifiers. Compilers MUST wire each named agent in as a tool whose input schema is the sub-agent's declared `inputs`.
+
+### 4.10 `temperature`
+
+Sampling temperature, a number in `[0, 1]`. When absent, the model provider's default applies. Values outside the range MUST produce an error diagnostic.
 
 ## 5. Types
 
@@ -111,6 +118,8 @@ Object types MUST be quoted (they contain TOON-significant characters). A traili
 - Any other `{...}` sequence is an error diagnostic.
 
 Non-scalar interpolated values (objects, arrays) MUST be rendered as TOON, not as a host-language default string conversion.
+
+**Omitted optionals.** When an optional input (§4.4) is omitted: an interpolation of it (or a field path through it) renders as the empty string; an `{#each}` over it iterates as the empty array (so a `{:else}` branch renders); an `{#if}` on an optional boolean treats it as false.
 
 ### 6.2 Loops
 

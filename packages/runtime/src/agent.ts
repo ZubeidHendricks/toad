@@ -9,6 +9,7 @@ import {
   type LlmText,
   type LlmTool,
   type LlmToolUse,
+  type LlmUsage,
 } from "./client.js";
 import { MaxTurnsError, OutputParseError, ToolError } from "./errors.js";
 import type { AnyToolDef, ToolDef } from "./tool.js";
@@ -27,10 +28,32 @@ export interface ToolResultEncoding {
   savedTokens: number;
 }
 
+/**
+ * Token usage for one model call (or a running total across a run), as
+ * reported by the API. Cache fields measure prompt caching at work: tokens
+ * read from the cache are billed at a fraction of the input rate, so a high
+ * `cacheReadTokens` is the multi-turn savings the runtime's `cache_control`
+ * breakpoints exist to produce.
+ */
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  /** Input tokens served from the prompt cache (cheap). */
+  cacheReadTokens: number;
+  /** Input tokens written to the prompt cache this call. */
+  cacheWriteTokens: number;
+}
+
 export interface AgentHooks {
   onToolCall?: (name: string, input: unknown) => void;
   onToolResult?: (name: string, output: unknown) => void;
   onError?: (error: unknown) => void;
+  /**
+   * Called after each model response with that call's token usage and the
+   * cumulative total for the run — the framework's namesake, measured. Both
+   * objects are snapshots; mutating them has no effect.
+   */
+  onUsage?: (turn: TokenUsage, total: TokenUsage) => void;
   /**
    * Called after each tool result is serialized, with the token cost of the
    * chosen encoding vs JSON. Sum `savedTokens` to log "saved N tokens this run"
@@ -53,6 +76,8 @@ export interface AgentConfig<I, O> {
   system?: (inputs: I) => string;
   maxTurns?: number;
   maxTokens?: number;
+  /** Sampling temperature (0–1); omitted = the API default. */
+  temperature?: number;
   /** Retry the model call up to this many times on error. */
   retries?: number;
   /**
@@ -137,9 +162,15 @@ export function createAgent<I, O = string>(
         userText += `\n\nWhen finished, call the \`${RESPOND_TOOL}\` tool with the final result.`;
       }
       const messages: LlmMessage[] = [{ role: "user", content: userText }];
+      const total: TokenUsage = {
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      };
 
       for (let turn = 0; turn < maxTurns; turn++) {
-        const res = await callModel({
+        const req: LlmRequest = {
           model: config.model,
           max_tokens: maxTokens,
           system: [
@@ -149,9 +180,16 @@ export function createAgent<I, O = string>(
               cache_control: { type: "ephemeral" },
             },
           ],
-          tools: tools.length > 0 ? tools : undefined,
           messages,
-        });
+        };
+        if (tools.length > 0) {
+          req.tools = tools;
+        }
+        if (config.temperature !== undefined) {
+          req.temperature = config.temperature;
+        }
+        const res = await callModel(req);
+        trackUsage(res, total, hooks);
 
         const toolUses = res.content.filter(
           (b): b is LlmToolUse => b.type === "tool_use",
@@ -166,12 +204,12 @@ export function createAgent<I, O = string>(
           return joinText(res.content) as O;
         }
 
-        messages.push({ role: "assistant", content: res.content });
-        const results: unknown[] = [];
-
-        for (const tu of toolUses) {
-          if (config.outputSchema && tu.name === RESPOND_TOOL) {
-            const parsed = config.outputSchema.safeParse(tu.input);
+        // Structured output ends the run; the model is done, so any sibling
+        // tool calls in the same turn are moot and are not executed.
+        if (config.outputSchema) {
+          const respond = toolUses.find((tu) => tu.name === RESPOND_TOOL);
+          if (respond !== undefined) {
+            const parsed = config.outputSchema.safeParse(respond.input);
             if (!parsed.success) {
               throw new OutputParseError(
                 `agent "${config.name}" returned invalid output: ${parsed.error.message}`,
@@ -179,40 +217,49 @@ export function createAgent<I, O = string>(
             }
             return parsed.data;
           }
-          const def = toolDefs[tu.name];
-          if (!def) {
-            results.push(toolResult(tu.id, `unknown tool "${tu.name}"`, true));
-            continue;
-          }
-          const input = def.input.safeParse(tu.input);
-          if (!input.success) {
-            results.push(
-              toolResult(tu.id, `invalid input: ${input.error.message}`, true),
-            );
-            continue;
-          }
-          hooks?.onToolCall?.(tu.name, input.data);
-          let output: unknown;
-          try {
-            output = await def.run(input.data);
-          } catch (err) {
-            hooks?.onError?.(err);
-            throw new ToolError(tu.name, err);
-          }
-          hooks?.onToolResult?.(tu.name, output);
-          const enc = serializeResult(
-            output,
-            config.toolResultFormat ?? "json",
-          );
-          results.push(toolResult(tu.id, enc.text));
-          hooks?.onToolResultEncoded?.({
-            tool: tu.name,
-            format: enc.format,
-            jsonTokens: enc.jsonTokens,
-            sentTokens: enc.sentTokens,
-            savedTokens: Math.max(0, enc.jsonTokens - enc.sentTokens),
-          });
         }
+
+        messages.push({ role: "assistant", content: res.content });
+
+        // Tools within one turn run concurrently (the model asked for all of
+        // them at once); results are sent back in the model's request order.
+        const results = await Promise.all(
+          toolUses.map(async (tu): Promise<unknown> => {
+            const def = toolDefs[tu.name];
+            if (!def) {
+              return toolResult(tu.id, `unknown tool "${tu.name}"`, true);
+            }
+            const input = def.input.safeParse(tu.input);
+            if (!input.success) {
+              return toolResult(
+                tu.id,
+                `invalid input: ${input.error.message}`,
+                true,
+              );
+            }
+            hooks?.onToolCall?.(tu.name, input.data);
+            let output: unknown;
+            try {
+              output = await def.run(input.data);
+            } catch (err) {
+              hooks?.onError?.(err);
+              throw new ToolError(tu.name, err);
+            }
+            hooks?.onToolResult?.(tu.name, output);
+            const enc = serializeResult(
+              output,
+              config.toolResultFormat ?? "json",
+            );
+            hooks?.onToolResultEncoded?.({
+              tool: tu.name,
+              format: enc.format,
+              jsonTokens: enc.jsonTokens,
+              sentTokens: enc.sentTokens,
+              savedTokens: Math.max(0, enc.jsonTokens - enc.sentTokens),
+            });
+            return toolResult(tu.id, enc.text);
+          }),
+        );
 
         messages.push({ role: "user", content: results });
       }
@@ -240,6 +287,9 @@ export function createAgent<I, O = string>(
           ],
           messages: [{ role: "user", content: userText }],
         };
+        if (config.temperature !== undefined) {
+          req.temperature = config.temperature;
+        }
         for await (const chunk of client.stream(req)) {
           if (chunk.text !== undefined) {
             yield chunk.text;
@@ -268,6 +318,29 @@ function toInputSchema(schema: ZodType<any>): Record<string, unknown> {
   const json = z.toJSONSchema(schema) as Record<string, unknown>;
   delete json.$schema;
   return json;
+}
+
+/** Fold a response's usage into the running total and notify `onUsage`. */
+function trackUsage(
+  res: LlmResponse,
+  total: TokenUsage,
+  hooks: AgentHooks | undefined,
+): void {
+  const u: LlmUsage | undefined = res.usage;
+  if (u === undefined) {
+    return;
+  }
+  const turn: TokenUsage = {
+    inputTokens: u.input_tokens,
+    outputTokens: u.output_tokens,
+    cacheReadTokens: u.cache_read_input_tokens ?? 0,
+    cacheWriteTokens: u.cache_creation_input_tokens ?? 0,
+  };
+  total.inputTokens += turn.inputTokens;
+  total.outputTokens += turn.outputTokens;
+  total.cacheReadTokens += turn.cacheReadTokens;
+  total.cacheWriteTokens += turn.cacheWriteTokens;
+  hooks?.onUsage?.(turn, { ...total });
 }
 
 function toolResult(id: string, content: string, isError = false): unknown {

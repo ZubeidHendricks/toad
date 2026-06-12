@@ -19,6 +19,7 @@ const ALLOWED_KEYS = new Set([
   "system",
   "maxTurns",
   "retries",
+  "temperature",
   "uses",
 ]);
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -89,6 +90,7 @@ export function validate(
   const uses = parseUses(value, file, diagnostics, at);
   const maxTurns = parseIntKey(value, "maxTurns", file, diagnostics, at);
   const retries = parseIntKey(value, "retries", file, diagnostics, at);
+  const temperature = parseTemperature(value, file, diagnostics, at);
   const prompt =
     typeof promptText === "string"
       ? parsePrompt(promptText, inputs, file, diagnostics, at)
@@ -134,7 +136,34 @@ export function validate(
   if (retries !== undefined) {
     ast.retries = retries;
   }
+  if (temperature !== undefined) {
+    ast.temperature = temperature;
+  }
   return { ast, diagnostics };
+}
+
+function parseTemperature(
+  obj: JsonObject,
+  file: string,
+  diagnostics: Diagnostic[],
+  at: Locator,
+): number | undefined {
+  const v = obj.temperature;
+  if (v === undefined) {
+    return undefined;
+  }
+  if (typeof v !== "number" || Number.isNaN(v) || v < 0 || v > 1) {
+    diagnostics.push(
+      errorDiagnostic(
+        "TOA207",
+        `"temperature" must be a number between 0 and 1`,
+        file,
+        at("temperature"),
+      ),
+    );
+    return undefined;
+  }
+  return v;
 }
 
 function parseUses(
@@ -263,30 +292,35 @@ function parseFields(
       );
       continue;
     }
-    if (!IDENT.test(item.name)) {
+    const rawName: string = item.name;
+    const rawType: string = item.type;
+    // A trailing `?` on the name marks the field optional: `topic?,string`.
+    const optional = rawName.endsWith("?");
+    const name = optional ? rawName.slice(0, -1) : rawName;
+    if (!IDENT.test(name)) {
       diagnostics.push(
         errorDiagnostic(
           "TOA211",
-          `"${key}" name "${item.name}" must be an identifier`,
+          `"${key}" name "${name}" must be an identifier`,
           file,
           at(key),
         ),
       );
       continue;
     }
-    const type = parseType(item.type);
+    const type = parseType(rawType);
     if (type === undefined) {
       diagnostics.push(
         errorDiagnostic(
           "TOA212",
-          `"${key}" has unsupported type "${item.type}" (use string | number | boolean, optional "[]")`,
+          `"${key}" has unsupported type "${rawType}" (use string | number | boolean, optional "[]")`,
           file,
           at(key),
         ),
       );
       continue;
     }
-    fields.push({ name: item.name, type });
+    fields.push(optional ? { name, type, optional } : { name, type });
   }
   return fields;
 }

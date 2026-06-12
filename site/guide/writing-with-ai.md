@@ -22,9 +22,12 @@ THE .agent FORMAT (indentation is 2 spaces, never tabs):
   outputs[N]{name,type}:   optional. N typed result fields, one per indented row
   system: |                optional. a system prompt (else uses the description)
   uses[N]: <a>,<b>         optional. sub-agents used as tools
+  temperature: <number>    optional. sampling temperature, 0 to 1
 
 TYPES: string | number | boolean, or a quoted object type "{a:string;b:number}".
 Append [] for an array (string[], "{...}[]"). Read object fields with x.field.
+A trailing ? on a field name (detail?,string) makes it optional — omitted
+optionals interpolate as empty, iterate as an empty list, and test false in #if.
 
 INTERPOLATION: in the prompt, {inputs.<name>} inserts a declared input's value.
 The name must be one you declared in inputs. Use {{ and }} for literal braces.

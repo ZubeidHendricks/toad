@@ -35,14 +35,24 @@ export interface LlmTool {
 export interface LlmRequest {
   model: string;
   max_tokens: number;
+  temperature?: number;
   system?: unknown;
   tools?: LlmTool[];
   messages: LlmMessage[];
 }
 
+/** Token usage reported by the API for a single model call (wire shape). */
+export interface LlmUsage {
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_input_tokens?: number;
+  cache_read_input_tokens?: number;
+}
+
 export interface LlmResponse {
   content: LlmBlock[];
   stop_reason: string | null;
+  usage?: LlmUsage;
 }
 
 /** A streamed text delta from the model. */
@@ -70,7 +80,14 @@ export function anthropicClient(options?: { apiKey?: string }): LlmClient {
       const res = (await client.messages.create(
         req as never,
       )) as unknown as LlmResponse;
-      return { content: res.content, stop_reason: res.stop_reason };
+      const out: LlmResponse = {
+        content: res.content,
+        stop_reason: res.stop_reason,
+      };
+      if (res.usage !== undefined) {
+        out.usage = res.usage;
+      }
+      return out;
     },
     async *stream(req) {
       const events = client.messages.stream(req as never) as AsyncIterable<{

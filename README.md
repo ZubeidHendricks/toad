@@ -51,16 +51,17 @@ agent. Tool bodies live in a co-located `researcher.tools.ts`.
 A `.agent` file is a strict superset of TOON. Inside `prompt:` you get a small,
 type-checked template language:
 
-| Construct      | Example                                                      |
-| -------------- | ------------------------------------------------------------ |
-| Interpolation  | `{inputs.topic}`                                             |
-| Environment    | `{env.API_BASE}`                                             |
-| Object fields  | `{inputs.user.name}`                                         |
-| Loops          | `{#each inputs.items as x, i}{i}. {x}{/each}`                |
-| Empty fallback | `{#each xs as x}…{:else}none{/each}`                         |
-| Destructuring  | `{#each rows as {title, score}}…{/each}`                     |
-| Conditionals   | `{#if inputs.verbose}…{:else if inputs.brief}…{:else}…{/if}` |
-| Literal braces | `{{` and `}}`                                                |
+| Construct       | Example                                                      |
+| --------------- | ------------------------------------------------------------ |
+| Interpolation   | `{inputs.topic}`                                             |
+| Environment     | `{env.API_BASE}`                                             |
+| Object fields   | `{inputs.user.name}`                                         |
+| Loops           | `{#each inputs.items as x, i}{i}. {x}{/each}`                |
+| Empty fallback  | `{#each xs as x}…{:else}none{/each}`                         |
+| Destructuring   | `{#each rows as {title, score}}…{/each}`                     |
+| Conditionals    | `{#if inputs.verbose}…{:else if inputs.brief}…{:else}…{/if}` |
+| Literal braces  | `{{` and `}}`                                                |
+| Optional inputs | `detail?,string` (omitted → empty / empty list / false)      |
 
 Types are `string` / `number` / `boolean`, a quoted object like
 `"{a:string;b:number}"`, and any of those with `[]`. Every reference is validated
@@ -75,6 +76,9 @@ The generated agent runs a tool-use loop over the Anthropic API with:
 - **Lifecycle** — `retries`, `maxTurns`, and `onToolCall` / `onToolResult` /
   `onError` hooks.
 - **Streaming** — `agent.stream(inputs)` yields text deltas.
+- **Token accounting** — the `onUsage` hook reports per-call and cumulative
+  usage, including prompt-cache reads/writes; same-turn tool calls run
+  concurrently.
 - **Token-efficient tool results** — set `toolResultFormat: "auto"` to feed tool
   results back to the model as TOON instead of JSON when it saves tokens
   (~30–50% on tabular results), so multi-turn loops stay cheap. Defaults to

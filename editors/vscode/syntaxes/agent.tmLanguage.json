@@ -17,7 +17,7 @@
       "name": "comment.line.number-sign.agent"
     },
     "scalar-key": {
-      "match": "^(agent|model|description|maxTurns|retries)(:)\\s*(.*)$",
+      "match": "^(agent|model|description|maxTurns|retries|temperature)(:)\\s*(.*)$",
       "captures": {
         "1": { "name": "keyword.other.definition.agent" },
         "2": { "name": "punctuation.separator.key-value.agent" },
@@ -67,11 +67,12 @@
       }
     },
     "field-row": {
-      "match": "^\\s{2,}([A-Za-z_][A-Za-z0-9_]*)(,)(.+)$",
+      "match": "^\\s{2,}([A-Za-z_][A-Za-z0-9_]*)(\\??)(,)(.+)$",
       "captures": {
         "1": { "name": "variable.other.field.agent" },
-        "2": { "name": "punctuation.separator.field.agent" },
-        "3": { "patterns": [{ "include": "#type" }] }
+        "2": { "name": "keyword.operator.optional.agent" },
+        "3": { "name": "punctuation.separator.field.agent" },
+        "4": { "patterns": [{ "include": "#type" }] }
       }
     },
     "type": {
