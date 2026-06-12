@@ -88,6 +88,17 @@ The generated agent runs a tool-use loop over the Anthropic API with:
 - **`toad-compiler`** — the `toac` compiler (`.agent` → `.ts`).
 - **`toad-runtime`** — `defineTool`, `createAgent`, the tool loop, and the above.
 
+## The spec
+
+The `.agent` format is specified in [`SPEC.md`](./SPEC.md) — versioned and
+normative, so other tools can target it. Proposals welcome as issues/PRs.
+
+## Editor support
+
+A VS Code extension with full `.agent` syntax highlighting lives in
+[`editors/vscode`](./editors/vscode) (the same TextMate grammar powers the
+site's code blocks).
+
 ## Install
 
 ```bash
@@ -98,10 +109,11 @@ npm i -g toad-compiler
 npm i toad-runtime @anthropic-ai/sdk
 ```
 
-Compile an agent to typed TypeScript:
+Scaffold and compile an agent:
 
 ```bash
-toac build researcher.agent
+toac init researcher        # → researcher.agent + researcher.tools.ts
+toac build researcher.agent # → researcher.ts (typed TypeScript)
 ```
 
 [![toad-compiler version](https://img.shields.io/npm/v/toad-compiler?label=toad-compiler)](https://www.npmjs.com/package/toad-compiler)

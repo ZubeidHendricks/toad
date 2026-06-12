@@ -1,0 +1,27 @@
+# TOAD
+
+> TOAD (Token-Oriented Agentic Development) is a compile-first framework for building AI agents. An agent is a tiny declarative `.agent` file — a strict superset of TOON (Token-Oriented Object Notation) — that the `toac` compiler turns into readable, fully-typed TypeScript running on Claude. Authoring is 30–38% fewer tokens than equivalent JSON; at runtime, tool results can be re-encoded as TOON for another 30–40% savings on tabular data.
+
+Key facts: two npm packages (`toad-compiler` with the `toac` CLI, and `toad-runtime`); typed inputs/outputs/tools backed by zod; a type-checked prompt template language ({inputs.x}, {#each}, {#if}); agent composition via `uses:`; located file:line:col diagnostics.
+
+## Docs
+
+- [Getting Started](https://zubeidhendricks.github.io/toad/guide/getting-started.html): install, first agent, tools, running
+- [Tutorial](https://zubeidhendricks.github.io/toad/guide/tutorial.html): six steps from a 3-line agent to composition
+- [The .agent Format](https://zubeidhendricks.github.io/toad/guide/agent-format.html): every key, types, a complete example
+- [Prompt Templates](https://zubeidhendricks.github.io/toad/guide/templates.html): interpolation, loops, conditionals
+- [Write Agents with AI](https://zubeidhendricks.github.io/toad/guide/writing-with-ai.html): a copy-paste prompt that turns any LLM into a TOAD author
+- [The .agent Specification](https://zubeidhendricks.github.io/toad/reference/spec.html): the normative, versioned format spec
+- [CLI Reference](https://zubeidhendricks.github.io/toad/reference/cli.html): toac build / check / init, flags, exit codes
+- [Runtime Reference](https://zubeidhendricks.github.io/toad/reference/runtime.html): createAgent, defineTool, hooks, TOON serialization
+
+## Evidence
+
+- [Benchmarks](https://zubeidhendricks.github.io/toad/benchmarks.html): measured token numbers for authoring and tool-result serialization
+
+## Optional
+
+- [Examples](https://zubeidhendricks.github.io/toad/examples.html): five agents with their exact compiled TypeScript
+- [Ecosystem](https://zubeidhendricks.github.io/toad/ecosystem.html): packages, what TOAD builds on, editor support
+- [Playground](https://zubeidhendricks.github.io/toad/playground.html): the real compiler running in the browser (interactive; not useful to fetch)
+- [Full docs as one file](https://zubeidhendricks.github.io/toad/llms-full.txt): all pages concatenated

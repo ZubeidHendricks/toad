@@ -42,5 +42,5 @@ jobs:
       - name: Build packages
         run: pnpm build
 
-      - name: Bundle site (compiler + tokenizer)
-        run: pnpm build:site
+      - name: Build site (bundle compiler + VitePress)
+        run: pnpm site:build

@@ -1,0 +1,29 @@
+{
+  "comments": {
+    "lineComment": "#"
+  },
+  "brackets": [
+    ["{", "}"],
+    ["[", "]"]
+  ],
+  "autoClosingPairs": [
+    { "open": "{", "close": "}" },
+    { "open": "[", "close": "]" },
+    { "open": "\"", "close": "\"" }
+  ],
+  "surroundingPairs": [
+    ["{", "}"],
+    ["[", "]"],
+    ["\"", "\""]
+  ],
+  "onEnterRules": [
+    {
+      "beforeText": "^(prompt|system):\\s*\\|[+-]?\\s*$",
+      "action": { "indent": "indent" }
+    },
+    {
+      "beforeText": "^(inputs|outputs)\\[\\d+\\]\\{[^}]*\\}:\\s*$",
+      "action": { "indent": "indent" }
+    }
+  ]
+}
