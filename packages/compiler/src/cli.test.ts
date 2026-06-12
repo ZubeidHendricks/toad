@@ -60,3 +60,44 @@ describe("toac CLI", () => {
     );
   });
 });
+
+describe("toac init", () => {
+  it("scaffolds <name>.agent and <name>.tools.ts that compile", async () => {
+    const target = join(dir, "scout");
+    expect(await run(["init", target], silent)).toBe(0);
+    const agent = await readFile(join(dir, "scout.agent"), "utf8");
+    expect(agent).toContain("agent: scout");
+    const tools = await readFile(join(dir, "scout.tools.ts"), "utf8");
+    expect(tools).toContain("defineTool");
+    // The starter must be a valid agent document.
+    expect(await run(["check", join(dir, "scout.agent")], silent)).toBe(0);
+  });
+
+  it("creates intermediate directories", async () => {
+    const target = join(dir, "agents", "scout");
+    expect(await run(["init", target], silent)).toBe(0);
+    await expect(
+      readFile(join(dir, "agents", "scout.agent"), "utf8"),
+    ).resolves.toContain("agent: scout");
+  });
+
+  it("refuses to overwrite existing files", async () => {
+    const target = join(dir, "scout");
+    expect(await run(["init", target], silent)).toBe(0);
+    const errors: string[] = [];
+    const code = await run(["init", target], {
+      log: () => {},
+      error: (line) => errors.push(line),
+    });
+    expect(code).toBe(1);
+    expect(errors.join("\n")).toContain("already exists");
+  });
+
+  it("rejects an invalid agent name", async () => {
+    expect(await run(["init", join(dir, "2bad")], silent)).toBe(1);
+  });
+
+  it("requires a name", async () => {
+    expect(await run(["init"], silent)).toBe(1);
+  });
+});

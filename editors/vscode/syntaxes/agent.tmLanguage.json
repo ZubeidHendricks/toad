@@ -1,0 +1,169 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "TOAD Agent",
+  "scopeName": "source.agent",
+  "fileTypes": ["agent"],
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#block-key" },
+    { "include": "#tabular-header" },
+    { "include": "#list-header" },
+    { "include": "#scalar-key" },
+    { "include": "#field-row" }
+  ],
+  "repository": {
+    "comment": {
+      "match": "^\\s*(#).*$",
+      "name": "comment.line.number-sign.agent"
+    },
+    "scalar-key": {
+      "match": "^(agent|model|description|maxTurns|retries)(:)\\s*(.*)$",
+      "captures": {
+        "1": { "name": "keyword.other.definition.agent" },
+        "2": { "name": "punctuation.separator.key-value.agent" },
+        "3": { "name": "string.unquoted.value.agent" }
+      }
+    },
+    "block-key": {
+      "begin": "^(prompt|system)(:)\\s*(\\|[+-]?)\\s*$",
+      "beginCaptures": {
+        "1": { "name": "keyword.other.definition.agent" },
+        "2": { "name": "punctuation.separator.key-value.agent" },
+        "3": { "name": "storage.modifier.block-scalar.agent" }
+      },
+      "while": "^(?:\\s{2,}|\\s*$)",
+      "contentName": "string.unquoted.block.agent",
+      "patterns": [{ "include": "#template" }]
+    },
+    "tabular-header": {
+      "match": "^(inputs|outputs)(\\[)(\\d+)(\\])(\\{)([^}]*)(\\})(:)\\s*$",
+      "captures": {
+        "1": { "name": "keyword.other.definition.agent" },
+        "2": { "name": "punctuation.definition.length.agent" },
+        "3": { "name": "constant.numeric.length.agent" },
+        "4": { "name": "punctuation.definition.length.agent" },
+        "5": { "name": "punctuation.definition.fields.agent" },
+        "6": { "name": "variable.parameter.header.agent" },
+        "7": { "name": "punctuation.definition.fields.agent" },
+        "8": { "name": "punctuation.separator.key-value.agent" }
+      }
+    },
+    "list-header": {
+      "match": "^(tools|uses)(\\[)(\\d+)(\\])(:)\\s*(.*)$",
+      "captures": {
+        "1": { "name": "keyword.other.definition.agent" },
+        "2": { "name": "punctuation.definition.length.agent" },
+        "3": { "name": "constant.numeric.length.agent" },
+        "4": { "name": "punctuation.definition.length.agent" },
+        "5": { "name": "punctuation.separator.key-value.agent" },
+        "6": {
+          "patterns": [
+            {
+              "match": "[A-Za-z_][A-Za-z0-9_]*",
+              "name": "entity.name.function.tool.agent"
+            }
+          ]
+        }
+      }
+    },
+    "field-row": {
+      "match": "^\\s{2,}([A-Za-z_][A-Za-z0-9_]*)(,)(.+)$",
+      "captures": {
+        "1": { "name": "variable.other.field.agent" },
+        "2": { "name": "punctuation.separator.field.agent" },
+        "3": { "patterns": [{ "include": "#type" }] }
+      }
+    },
+    "type": {
+      "patterns": [
+        {
+          "match": "\\b(string|number|boolean)(\\[\\])?",
+          "captures": {
+            "1": { "name": "storage.type.primitive.agent" },
+            "2": { "name": "keyword.operator.array.agent" }
+          }
+        },
+        {
+          "begin": "\"",
+          "end": "\"",
+          "name": "string.quoted.double.type.agent",
+          "patterns": [
+            {
+              "match": "\\b(string|number|boolean)\\b",
+              "name": "storage.type.primitive.agent"
+            },
+            {
+              "match": "[A-Za-z_][A-Za-z0-9_]*(?=\\s*:)",
+              "name": "variable.other.property.agent"
+            }
+          ]
+        }
+      ]
+    },
+    "template": {
+      "patterns": [
+        {
+          "match": "\\{\\{|\\}\\}",
+          "name": "constant.character.escape.brace.agent"
+        },
+        {
+          "match": "(\\{)(#each)\\s+([^}]*?)(?:\\s+(as)\\s+([^}]*?))?(\\})",
+          "captures": {
+            "1": { "name": "punctuation.definition.template.agent" },
+            "2": { "name": "keyword.control.each.agent" },
+            "3": { "name": "variable.other.interpolation.agent" },
+            "4": { "name": "keyword.control.as.agent" },
+            "5": { "name": "variable.parameter.binding.agent" },
+            "6": { "name": "punctuation.definition.template.agent" }
+          }
+        },
+        {
+          "match": "(\\{)(#if)\\s+(!?)([^}]*)(\\})",
+          "captures": {
+            "1": { "name": "punctuation.definition.template.agent" },
+            "2": { "name": "keyword.control.if.agent" },
+            "3": { "name": "keyword.operator.logical.agent" },
+            "4": { "name": "variable.other.interpolation.agent" },
+            "5": { "name": "punctuation.definition.template.agent" }
+          }
+        },
+        {
+          "match": "(\\{)(:else if)\\s+(!?)([^}]*)(\\})",
+          "captures": {
+            "1": { "name": "punctuation.definition.template.agent" },
+            "2": { "name": "keyword.control.elseif.agent" },
+            "3": { "name": "keyword.operator.logical.agent" },
+            "4": { "name": "variable.other.interpolation.agent" },
+            "5": { "name": "punctuation.definition.template.agent" }
+          }
+        },
+        {
+          "match": "(\\{)(:else|/each|/if)(\\})",
+          "captures": {
+            "1": { "name": "punctuation.definition.template.agent" },
+            "2": { "name": "keyword.control.template.agent" },
+            "3": { "name": "punctuation.definition.template.agent" }
+          }
+        },
+        {
+          "match": "(\\{)(inputs|env)(\\.)([A-Za-z_][A-Za-z0-9_.]*)(\\})",
+          "captures": {
+            "1": { "name": "punctuation.definition.template.agent" },
+            "2": { "name": "support.constant.namespace.agent" },
+            "3": { "name": "punctuation.accessor.agent" },
+            "4": { "name": "variable.other.interpolation.agent" },
+            "5": { "name": "punctuation.definition.template.agent" }
+          }
+        },
+        {
+          "match": "(\\{)([A-Za-z_][A-Za-z0-9_.]*)(\\})",
+          "captures": {
+            "1": { "name": "punctuation.definition.template.agent" },
+            "2": { "name": "variable.other.binding.agent" },
+            "3": { "name": "punctuation.definition.template.agent" }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -10,11 +10,25 @@ npm i -g toad-compiler
 
 ```bash
 toac <build|check> <paths...> [--outDir <dir>]
+toac init <name>
 ```
 
 Paths may be `.agent` files or directories — directories are scanned recursively for `.agent` files. Globbing is the shell's job.
 
 ## Commands
+
+### `toac init`
+
+Scaffold a new agent: `<name>.agent` (a minimal tool-using agent) plus the co-located `<name>.tools.ts` it imports from. Refuses to overwrite existing files.
+
+```bash
+toac init researcher
+# created researcher.agent
+# created researcher.tools.ts
+# next: toac build researcher.agent
+
+toac init agents/scout   # creates intermediate directories
+```
 
 ### `toac build`
 

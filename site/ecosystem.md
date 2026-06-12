@@ -32,16 +32,15 @@ npm i toad-runtime @anthropic-ai/sdk
 
 ## Editor support
 
-`.agent` files highlight reasonably as YAML today — map the extension in VS Code:
+The **[TOAD Agent VS Code extension](https://github.com/ZubeidHendricks/toad/tree/main/editors/vscode)** gives `.agent` files full syntax highlighting — keys, `[N]` length markers, tabular headers, types, and the whole template language (`{#each}`, `{#if}`, interpolation). Until it's on the marketplace, install from source:
 
-```jsonc
-// .vscode/settings.json
-{
-  "files.associations": { "*.agent": "yaml" }
-}
+```bash
+cd editors/vscode
+npx @vscode/vsce package
+code --install-extension toad-agent-0.1.0.vsix
 ```
 
-A dedicated grammar (and `toac check` diagnostics in-editor) is on the roadmap — [issues and PRs welcome](https://github.com/ZubeidHendricks/toad/issues).
+The same TextMate grammar powers the code blocks on this site. In-editor diagnostics from `toac check` are on the roadmap — [issues and PRs welcome](https://github.com/ZubeidHendricks/toad/issues).
 
 ## Contributing
 

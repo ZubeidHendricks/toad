@@ -1,4 +1,19 @@
 import { defineConfig } from "vitepress";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+// The canonical .agent TextMate grammar — shared with the VS Code extension.
+const agentGrammar = JSON.parse(
+  readFileSync(
+    fileURLToPath(
+      new URL(
+        "../../editors/vscode/syntaxes/agent.tmLanguage.json",
+        import.meta.url,
+      ),
+    ),
+    "utf8",
+  ),
+);
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -30,9 +45,9 @@ export default defineConfig({
   ],
 
   markdown: {
-    // .agent files are a strict TOON superset; YAML highlighting reads well
-    // for both until a dedicated grammar exists.
-    languageAlias: { agent: "yaml", toon: "yaml" },
+    // .agent gets its own grammar; plain TOON reads well enough as YAML.
+    languages: [{ ...agentGrammar, name: "agent" }],
+    languageAlias: { toon: "yaml" },
   },
 
   themeConfig: {
@@ -54,6 +69,7 @@ export default defineConfig({
         text: "Reference",
         activeMatch: "/reference/",
         items: [
+          { text: "The .agent Specification", link: "/reference/spec" },
           { text: "CLI (toac)", link: "/reference/cli" },
           { text: "Runtime (toad-runtime)", link: "/reference/runtime" },
         ],
@@ -131,6 +147,7 @@ function guideSidebar() {
     {
       text: "Reference",
       items: [
+        { text: "The .agent Specification", link: "/reference/spec" },
         { text: "CLI (toac)", link: "/reference/cli" },
         { text: "Runtime (toad-runtime)", link: "/reference/runtime" },
       ],

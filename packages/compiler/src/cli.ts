@@ -12,7 +12,38 @@ const consoleLogger: Logger = {
   error: (line) => process.stderr.write(`${line}\n`),
 };
 
-const USAGE = "usage: toac <build|check> <paths...> [--outDir <dir>]";
+const USAGE =
+  "usage: toac <build|check> <paths...> [--outDir <dir>] | toac init <name>";
+
+// Starter files for `toac init <name>`: a minimal tool-using agent plus the
+// co-located tools module the generated import expects.
+const initAgent = (name: string) => `agent: ${name}
+model: claude-opus-4-7
+description: Describe what ${name} does in one line.
+inputs[1]{name,type}:
+  topic,string
+tools[1]: search
+prompt: |
+  You are ${name}. Work on: {inputs.topic}
+  Use the search tool when you need information.
+outputs[1]{name,type}:
+  summary,string
+`;
+
+const initTools = (name: string) => `// Tool implementations for ${name}.agent.
+// \`toac build ${name}.agent\` generates ${name}.ts, which imports from here.
+import { defineTool } from "toad-runtime";
+import { z } from "zod";
+
+export const search = defineTool({
+  description: "Search for information about a query",
+  input: z.object({ query: z.string() }),
+  run: async ({ query }) => {
+    // TODO: implement (call an API, query a database, ...)
+    return \`results for \${query}\`;
+  },
+});
+`;
 
 /**
  * Run the `toac` CLI. Returns the process exit code (0 = success). Globbing is
@@ -28,6 +59,9 @@ export async function run(
   if (command === "--version" || command === "-v") {
     logger.log(`toac ${COMPILER_VERSION}`);
     return 0;
+  }
+  if (command === "init") {
+    return init(rest, logger);
   }
   if (command !== "build" && command !== "check") {
     logger.error(USAGE);
@@ -71,6 +105,42 @@ export async function run(
     }
   }
   return hadError ? 1 : 0;
+}
+
+/**
+ * `toac init <name>`: scaffold `<name>.agent` + `<name>.tools.ts` in the
+ * current directory (or under a given path, e.g. `toac init agents/researcher`).
+ * Refuses to overwrite existing files.
+ */
+async function init(args: string[], logger: Logger): Promise<number> {
+  const target = args[0];
+  if (target === undefined || target.startsWith("-")) {
+    logger.error("usage: toac init <name>");
+    return 1;
+  }
+  const name = basename(target).replace(/\.agent$/, "");
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+    logger.error(
+      `toac: "${name}" is not a valid agent name (letters/digits/_, starts with a letter or _)`,
+    );
+    return 1;
+  }
+  const dir = dirname(target);
+  const agentPath = join(dir, `${name}.agent`);
+  const toolsPath = join(dir, `${name}.tools.ts`);
+  for (const p of [agentPath, toolsPath]) {
+    if (await stat(p).catch(() => undefined)) {
+      logger.error(`toac: ${p} already exists`);
+      return 1;
+    }
+  }
+  await mkdir(dir, { recursive: true });
+  await writeFile(agentPath, initAgent(name), "utf8");
+  await writeFile(toolsPath, initTools(name), "utf8");
+  logger.log(`created ${agentPath}`);
+  logger.log(`created ${toolsPath}`);
+  logger.log(`next: toac build ${agentPath}`);
+  return 0;
 }
 
 async function collectAgentFiles(paths: string[]): Promise<string[]> {

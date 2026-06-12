@@ -8,5 +8,6 @@ dist/
 .tmp-*.mjs
 site/public/toad-compiler.js
 site/public/toad-tokenizer.js
+site/public/llms-full.txt
 site/.vitepress/dist/
 site/.vitepress/cache/

@@ -28,7 +28,7 @@ pnpm add toad-runtime @anthropic-ai/sdk
 
 ## Your first agent
 
-Create `greeter.agent`. An agent needs three things: a name, a model, and a prompt — that's a complete, runnable agent:
+`toac init <name>` scaffolds a starter `.agent` + `.tools.ts` pair — or write one by hand. An agent needs three things: a name, a model, and a prompt — that's a complete, runnable agent. Create `greeter.agent`:
 
 ```agent
 agent: greeter

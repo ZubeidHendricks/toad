@@ -1,0 +1,54 @@
+{
+  "name": "toad-agent",
+  "displayName": "TOAD Agent",
+  "description": "Syntax highlighting for TOAD .agent files — token-oriented, declarative AI agents compiled to typed TypeScript.",
+  "version": "0.1.0",
+  "publisher": "ZubeidHendricks",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ZubeidHendricks/toad",
+    "directory": "editors/vscode"
+  },
+  "homepage": "https://zubeidhendricks.github.io/toad/",
+  "bugs": {
+    "url": "https://github.com/ZubeidHendricks/toad/issues"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "toad",
+    "agent",
+    "toon",
+    "llm",
+    "claude",
+    "ai"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "agent",
+        "aliases": [
+          "TOAD Agent",
+          "agent"
+        ],
+        "extensions": [
+          ".agent"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "agent",
+        "scopeName": "source.agent",
+        "path": "./syntaxes/agent.tmLanguage.json"
+      }
+    ]
+  }
+}
