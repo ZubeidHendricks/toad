@@ -30,6 +30,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./mcp": {
+      "types": "./dist/mcp.d.ts",
+      "import": "./dist/mcp.js"
     }
   },
   "files": [

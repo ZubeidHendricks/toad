@@ -83,6 +83,10 @@ The generated agent runs a tool-use loop over the Anthropic API with:
   (forwarded to the API call and to tools); `toolTimeoutMs` /
   `defineTool({ timeoutMs })` time-box tool execution.
 - **Streaming** — `agent.stream(inputs)` yields text deltas.
+- **MCP export** — `serveMcp([agent])` (from `toad-runtime/mcp`) exposes compiled
+  agents as Model Context Protocol tools over stdio, so any MCP client (Claude
+  Desktop, Claude Code, …) can call them. Each agent's declared `inputs` becomes
+  the tool's input schema; the result is returned as text and `structuredContent`.
 - **Token accounting** — the `onUsage` hook reports per-call and cumulative
   usage, including prompt-cache reads/writes; same-turn tool calls run
   concurrently.
@@ -151,5 +155,5 @@ copy-paste prompt that turns any LLM into a TOAD author.
 
 ## Status
 
-82 passing tests, green gate (typecheck · test · lint · build). Design docs live
+147 passing tests, green gate (typecheck · test · lint · build). Design docs live
 in [`_bmad-output/`](./_bmad-output/).
