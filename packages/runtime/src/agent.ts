@@ -107,6 +107,22 @@ export interface RunOptions {
 }
 
 /**
+ * An event from `runStream()` — the full tool loop, observed as it happens:
+ * - `text` — a streamed text delta from the model.
+ * - `tool_use` — the model asked to call a tool (raw `input` as sent).
+ * - `tool_result` — that tool ran; `output` is its (pre-serialization) result.
+ * - `usage` — one model call's token usage and the running total.
+ * - `done` — the loop finished; `output` is the typed result (joined text when
+ *   the agent declares no `outputs`). Always the last event.
+ */
+export type AgentEvent<O = string> =
+  | { type: "text"; text: string }
+  | { type: "tool_use"; id: string; name: string; input: unknown }
+  | { type: "tool_result"; id: string; name: string; output: unknown }
+  | { type: "usage"; turn: TokenUsage; total: TokenUsage }
+  | { type: "done"; output: O };
+
+/**
  * A JSON-serializable snapshot of a session — persist it anywhere (a file, a
  * row, a KV store) and pass it back to `agent.session(inputs, state)` to
  * resume the conversation after a restart.
@@ -143,6 +159,12 @@ export interface Agent<I, O> {
   session(inputs: I, state?: SessionState): AgentSession<O>;
   /** Stream the model's text for the prompt (no tools / structured output). */
   stream(inputs: I, options?: RunOptions): AsyncIterable<string>;
+  /**
+   * Run the full tool loop, yielding {@link AgentEvent}s as they happen: text
+   * deltas, tool calls and their results, per-call usage, and a final typed
+   * `done` event. The streaming counterpart of `run()`.
+   */
+  runStream(inputs: I, options?: RunOptions): AsyncIterable<AgentEvent<O>>;
   /** Expose this agent as a tool that another agent can call. */
   asTool(options?: { description?: string }): ToolDef<I>;
 }
@@ -304,51 +326,8 @@ export function createAgent<I, O = string>(
 
         // Tools within one turn run concurrently (the model asked for all of
         // them at once); results are sent back in the model's request order.
-        const results = await Promise.all(
-          toolUses.map(async (tu): Promise<unknown> => {
-            const def = toolDefs[tu.name];
-            if (!def) {
-              return toolResult(tu.id, `unknown tool "${tu.name}"`, true);
-            }
-            const input = def.input.safeParse(tu.input);
-            if (!input.success) {
-              return toolResult(
-                tu.id,
-                `invalid input: ${input.error.message}`,
-                true,
-              );
-            }
-            hooks?.onToolCall?.(tu.name, input.data);
-            let output: unknown;
-            try {
-              output = await runTool(
-                def,
-                input.data,
-                tu.name,
-                def.timeoutMs ?? config.toolTimeoutMs,
-                signal,
-              );
-            } catch (err) {
-              hooks?.onError?.(err);
-              throw new ToolError(tu.name, err);
-            }
-            hooks?.onToolResult?.(tu.name, output);
-            const enc = serializeResult(
-              output,
-              config.toolResultFormat ?? "json",
-            );
-            hooks?.onToolResultEncoded?.({
-              tool: tu.name,
-              format: enc.format,
-              jsonTokens: enc.jsonTokens,
-              sentTokens: enc.sentTokens,
-              savedTokens: Math.max(0, enc.jsonTokens - enc.sentTokens),
-            });
-            return toolResult(tu.id, enc.text);
-          }),
-        );
-
-        messages.push({ role: "user", content: results });
+        const execs = await runToolUses(toolUses, toolDefs, config, signal);
+        messages.push({ role: "user", content: execs.map((e) => e.content) });
       }
 
       throw new MaxTurnsError(maxTurns);
@@ -447,6 +426,149 @@ export function createAgent<I, O = string>(
       }
       return generate();
     },
+    runStream(inputs: I, options?: RunOptions): AsyncIterable<AgentEvent<O>> {
+      const client = config.client ?? anthropicClient();
+      const signal = options?.signal;
+      async function* generate(): AsyncGenerator<AgentEvent<O>> {
+        if (client.stream === undefined) {
+          throw new Error(
+            `agent "${config.name}": the LLM client does not support streaming`,
+          );
+        }
+        let userText = config.prompt(inputs);
+        if (config.outputSchema) {
+          userText += `\n\nWhen finished, call the \`${RESPOND_TOOL}\` tool with the final result.`;
+        }
+        const messages: LlmMessage[] = [{ role: "user", content: userText }];
+        const total: TokenUsage = {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
+        };
+
+        for (let turn = 0; turn < maxTurns; turn++) {
+          signal?.throwIfAborted();
+          const req: LlmRequest = {
+            model: config.model,
+            max_tokens: maxTokens,
+            system: [
+              {
+                type: "text",
+                text: systemFor(inputs),
+                cache_control: { type: "ephemeral" },
+              },
+            ],
+            messages,
+          };
+          if (tools.length > 0) {
+            req.tools = tools;
+          }
+          if (config.temperature !== undefined) {
+            req.temperature = config.temperature;
+          }
+
+          // Stream this call: emit text deltas live, merge cumulative usage by
+          // maxima, and capture the terminal assembled message (with tool_use
+          // blocks) the client yields last.
+          const turnUsage: TokenUsage = {
+            inputTokens: 0,
+            outputTokens: 0,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+          };
+          let sawUsage = false;
+          let message: LlmResponse | undefined;
+          for await (const chunk of client.stream(
+            req,
+            signal ? { signal } : undefined,
+          )) {
+            if (chunk.text !== undefined) {
+              yield { type: "text", text: chunk.text };
+            }
+            if (chunk.usage !== undefined) {
+              sawUsage = true;
+              mergeUsage(turnUsage, chunk.usage);
+            }
+            if (chunk.message !== undefined) {
+              message = chunk.message;
+            }
+          }
+          if (message === undefined) {
+            throw new Error(
+              `agent "${config.name}": stream ended without a final message`,
+            );
+          }
+          if (message.usage !== undefined) {
+            sawUsage = true;
+            mergeUsage(turnUsage, message.usage);
+          }
+          if (sawUsage) {
+            total.inputTokens += turnUsage.inputTokens;
+            total.outputTokens += turnUsage.outputTokens;
+            total.cacheReadTokens += turnUsage.cacheReadTokens;
+            total.cacheWriteTokens += turnUsage.cacheWriteTokens;
+            const totalSnapshot = { ...total };
+            config.hooks?.onUsage?.({ ...turnUsage }, totalSnapshot);
+            yield {
+              type: "usage",
+              turn: { ...turnUsage },
+              total: totalSnapshot,
+            };
+          }
+
+          const toolUses = message.content.filter(
+            (b): b is LlmToolUse => b.type === "tool_use",
+          );
+
+          if (toolUses.length === 0) {
+            if (config.outputSchema) {
+              throw new OutputParseError(
+                `agent "${config.name}" stopped without calling ${RESPOND_TOOL}`,
+              );
+            }
+            yield { type: "done", output: joinText(message.content) as O };
+            return;
+          }
+
+          if (config.outputSchema) {
+            const respond = toolUses.find((tu) => tu.name === RESPOND_TOOL);
+            if (respond !== undefined) {
+              const parsed = config.outputSchema.safeParse(respond.input);
+              if (!parsed.success) {
+                throw new OutputParseError(
+                  `agent "${config.name}" returned invalid output: ${parsed.error.message}`,
+                );
+              }
+              yield { type: "done", output: parsed.data };
+              return;
+            }
+          }
+
+          messages.push({ role: "assistant", content: message.content });
+          for (const tu of toolUses) {
+            yield {
+              type: "tool_use",
+              id: tu.id,
+              name: tu.name,
+              input: tu.input,
+            };
+          }
+          const execs = await runToolUses(toolUses, toolDefs, config, signal);
+          for (const e of execs) {
+            yield {
+              type: "tool_result",
+              id: e.id,
+              name: e.name,
+              output: e.output,
+            };
+          }
+          messages.push({ role: "user", content: execs.map((e) => e.content) });
+        }
+        throw new MaxTurnsError(maxTurns);
+      }
+      return generate();
+    },
     asTool(options) {
       const input =
         config.inputSchema ?? (z.object({}) as unknown as ZodType<I>);
@@ -499,6 +621,106 @@ async function runTool(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** One executed tool call: its raw output and the tool_result block to send back. */
+interface ToolExecution {
+  id: string;
+  name: string;
+  /** The tool's pre-serialization result; `undefined` for unknown/invalid calls. */
+  output: unknown;
+  /** The `tool_result` content block fed back into the conversation. */
+  content: unknown;
+}
+
+/**
+ * Run the tools the model asked for in one turn. Calls run concurrently (the
+ * model requested them together); hooks fire and results return in request
+ * order. Shared by the blocking loop (`send`) and the streaming loop
+ * (`runStream`). A tool that throws aborts the run with a `ToolError`; an
+ * unknown tool or invalid input is fed back as an error tool_result so the
+ * model can recover.
+ */
+async function runToolUses<I, O>(
+  toolUses: LlmToolUse[],
+  toolDefs: Record<string, AnyToolDef>,
+  config: AgentConfig<I, O>,
+  signal: AbortSignal | undefined,
+): Promise<ToolExecution[]> {
+  const hooks = config.hooks;
+  return Promise.all(
+    toolUses.map(async (tu): Promise<ToolExecution> => {
+      const def = toolDefs[tu.name];
+      if (!def) {
+        return {
+          id: tu.id,
+          name: tu.name,
+          output: undefined,
+          content: toolResult(tu.id, `unknown tool "${tu.name}"`, true),
+        };
+      }
+      const input = def.input.safeParse(tu.input);
+      if (!input.success) {
+        return {
+          id: tu.id,
+          name: tu.name,
+          output: undefined,
+          content: toolResult(
+            tu.id,
+            `invalid input: ${input.error.message}`,
+            true,
+          ),
+        };
+      }
+      hooks?.onToolCall?.(tu.name, input.data);
+      let output: unknown;
+      try {
+        output = await runTool(
+          def,
+          input.data,
+          tu.name,
+          def.timeoutMs ?? config.toolTimeoutMs,
+          signal,
+        );
+      } catch (err) {
+        hooks?.onError?.(err);
+        throw new ToolError(tu.name, err);
+      }
+      hooks?.onToolResult?.(tu.name, output);
+      const enc = serializeResult(output, config.toolResultFormat ?? "json");
+      hooks?.onToolResultEncoded?.({
+        tool: tu.name,
+        format: enc.format,
+        jsonTokens: enc.jsonTokens,
+        sentTokens: enc.sentTokens,
+        savedTokens: Math.max(0, enc.jsonTokens - enc.sentTokens),
+      });
+      return {
+        id: tu.id,
+        name: tu.name,
+        output,
+        content: toolResult(tu.id, enc.text),
+      };
+    }),
+  );
+}
+
+/**
+ * Merge one cumulative streamed usage update into a running per-call snapshot.
+ * Stream usage arrives in pieces (input side at `message_start`, output side as
+ * deltas); fields are cumulative, so merge by maxima rather than summing.
+ */
+function mergeUsage(into: TokenUsage, u: LlmUsage): void {
+  into.inputTokens = Math.max(into.inputTokens, u.input_tokens ?? 0);
+  into.outputTokens = Math.max(into.outputTokens, u.output_tokens ?? 0);
+  into.cacheReadTokens = Math.max(
+    into.cacheReadTokens,
+    u.cache_read_input_tokens ?? 0,
+  );
+  into.cacheWriteTokens = Math.max(
+    into.cacheWriteTokens,
+    u.cache_creation_input_tokens ?? 0,
+  );
 }
 
 /** Fold a response's usage into the running total and notify `onUsage`. */

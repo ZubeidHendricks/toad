@@ -12,6 +12,7 @@ export {
   toonValue,
   type Agent,
   type AgentConfig,
+  type AgentEvent,
   type AgentHooks,
   type AgentSession,
   type RunOptions,

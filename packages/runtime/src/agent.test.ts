@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { createAgent } from "./agent.js";
-import type { LlmClient, LlmRequest, LlmResponse } from "./client.js";
+import type { LlmClient, LlmRequest, LlmResponse, LlmUsage } from "./client.js";
+import type { AgentEvent } from "./agent.js";
 import { MaxTurnsError, OutputParseError } from "./errors.js";
 import { defineTool } from "./tool.js";
 
@@ -966,5 +967,174 @@ describe("tool timeouts", () => {
       ]),
     });
     expect(await agent.run({})).toBe("done");
+  });
+});
+
+/** A streaming client: each turn yields text pieces, optional usage, then the
+ * terminal assembled message (the shape the real adapter emits). */
+function streamingClient(
+  turns: Array<{ text?: string[]; usage?: LlmUsage; message: LlmResponse }>,
+): LlmClient {
+  let i = 0;
+  return {
+    create: async () => ({ stop_reason: "end_turn", content: [] }),
+    async *stream() {
+      const t = turns[i++]!;
+      for (const piece of t.text ?? []) yield { text: piece };
+      if (t.usage) yield { usage: t.usage };
+      yield { message: t.message };
+    },
+  };
+}
+
+async function collect<O>(events: AsyncIterable<AgentEvent<O>>) {
+  const out: AgentEvent<O>[] = [];
+  for await (const ev of events) out.push(ev);
+  return out;
+}
+
+describe("runStream", () => {
+  it("streams text deltas and ends with a typed done event", async () => {
+    const client = streamingClient([
+      {
+        text: ["Hello, ", "world"],
+        message: {
+          stop_reason: "end_turn",
+          content: [{ type: "text", text: "Hello, world" }],
+        },
+      },
+    ]);
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      prompt: () => "hi",
+      client,
+    });
+    expect(await collect(agent.runStream({}))).toEqual([
+      { type: "text", text: "Hello, " },
+      { type: "text", text: "world" },
+      { type: "done", output: "Hello, world" },
+    ]);
+  });
+
+  it("emits tool_use / tool_result through the loop, then structured output", async () => {
+    const search = defineTool({
+      description: "search",
+      input: z.object({ q: z.string() }),
+      run: ({ q }) => `r:${q}`,
+    });
+    const client = streamingClient([
+      {
+        message: {
+          stop_reason: "tool_use",
+          content: [
+            {
+              type: "tool_use",
+              id: "t1",
+              name: "search",
+              input: { q: "cats" },
+            },
+          ],
+        },
+      },
+      {
+        message: {
+          stop_reason: "tool_use",
+          content: [
+            {
+              type: "tool_use",
+              id: "t2",
+              name: "respond",
+              input: { answer: "done" },
+            },
+          ],
+        },
+      },
+    ]);
+    const agent = createAgent({
+      name: "d",
+      model: "m",
+      tools: { search },
+      outputSchema: z.object({ answer: z.string() }),
+      prompt: () => "go",
+      client,
+    });
+    expect(await collect(agent.runStream({}))).toEqual([
+      { type: "tool_use", id: "t1", name: "search", input: { q: "cats" } },
+      { type: "tool_result", id: "t1", name: "search", output: "r:cats" },
+      { type: "done", output: { answer: "done" } },
+    ]);
+  });
+
+  it("reports per-call usage, merging cumulative pieces by maxima", async () => {
+    const client = streamingClient([
+      {
+        text: ["hi"],
+        usage: { input_tokens: 10, output_tokens: 5 },
+        message: {
+          stop_reason: "end_turn",
+          content: [{ type: "text", text: "hi" }],
+          usage: { input_tokens: 10, output_tokens: 7 },
+        },
+      },
+    ]);
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      prompt: () => "hi",
+      client,
+    });
+    const events = await collect(agent.runStream({}));
+    const usage = events.find((e) => e.type === "usage");
+    expect(usage).toEqual({
+      type: "usage",
+      turn: {
+        inputTokens: 10,
+        outputTokens: 7,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      },
+      total: {
+        inputTokens: 10,
+        outputTokens: 7,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      },
+    });
+  });
+
+  it("throws when a structured-output agent never calls respond", async () => {
+    const client = streamingClient([
+      {
+        message: {
+          stop_reason: "end_turn",
+          content: [{ type: "text", text: "oops" }],
+        },
+      },
+    ]);
+    const agent = createAgent({
+      name: "d",
+      model: "m",
+      outputSchema: z.object({ answer: z.string() }),
+      prompt: () => "go",
+      client,
+    });
+    await expect(collect(agent.runStream({}))).rejects.toBeInstanceOf(
+      OutputParseError,
+    );
+  });
+
+  it("throws when the client cannot stream", async () => {
+    const agent = createAgent({
+      name: "x",
+      model: "m",
+      prompt: () => "hi",
+      client: {
+        create: async () => ({ stop_reason: "end_turn", content: [] }),
+      },
+    });
+    await expect(collect(agent.runStream({}))).rejects.toThrow(
+      /does not support streaming/,
+    );
   });
 });

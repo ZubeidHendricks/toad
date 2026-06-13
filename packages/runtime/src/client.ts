@@ -64,6 +64,14 @@ export interface LlmStreamChunk {
    * are cumulative — consumers should merge by taking maxima, not summing.
    */
   usage?: LlmUsage;
+  /**
+   * Terminal chunk: the fully-assembled assistant message for this call, once
+   * the stream is complete. Carries the content blocks (including `tool_use`
+   * with parsed input) and the stop reason, so a streaming tool loop can
+   * execute the requested tools and continue. A client that streams MUST emit
+   * exactly one of these last; text-only consumers ignore it.
+   */
+  message?: LlmResponse;
 }
 
 /** Per-call options (cancellation). */
@@ -105,10 +113,11 @@ export function anthropicClient(options?: { apiKey?: string }): LlmClient {
       return out;
     },
     async *stream(req, options) {
-      const events = client.messages.stream(
+      const runner = client.messages.stream(
         req as never,
         options?.signal ? { signal: options.signal } : undefined,
-      ) as AsyncIterable<{
+      );
+      const events = runner as unknown as AsyncIterable<{
         type?: string;
         delta?: { type?: string; text?: string };
         message?: { usage?: LlmUsage };
@@ -133,6 +142,20 @@ export function anthropicClient(options?: { apiKey?: string }): LlmClient {
           yield { usage: event.usage };
         }
       }
+      // Terminal chunk: the SDK accumulates content blocks (including tool_use
+      // with parsed input) into the final message; surface it so the streaming
+      // tool loop can act on tool calls.
+      const final = (await (
+        runner as unknown as { finalMessage(): Promise<LlmResponse> }
+      ).finalMessage()) as LlmResponse;
+      const message: LlmResponse = {
+        content: final.content,
+        stop_reason: final.stop_reason,
+      };
+      if (final.usage !== undefined) {
+        message.usage = final.usage;
+      }
+      yield { message };
     },
   };
 }
