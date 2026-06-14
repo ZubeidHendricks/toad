@@ -44,6 +44,24 @@ export interface TokenUsage {
   cacheWriteTokens: number;
 }
 
+/**
+ * An estimate of how a model call's input tokens split across its parts. The
+ * provider reports only a single input total, so the runtime estimates the
+ * breakdown locally (same heuristic as elsewhere) — useful for seeing where
+ * input tokens actually go, above all the conversation history that grows every
+ * turn. Relative, not exact billing.
+ */
+export interface ContextBreakdown {
+  /** Estimated tokens for the system prompt sent this call. */
+  system: number;
+  /** Estimated tokens for the tool definitions sent this call. */
+  tools: number;
+  /** Estimated tokens for the conversation messages (history) sent this call. */
+  messages: number;
+  /** `system + tools + messages`. */
+  estimatedTotal: number;
+}
+
 export interface AgentHooks {
   onToolCall?: (name: string, input: unknown) => void;
   onToolResult?: (name: string, output: unknown) => void;
@@ -54,6 +72,13 @@ export interface AgentHooks {
    * objects are snapshots; mutating them has no effect.
    */
   onUsage?: (turn: TokenUsage, total: TokenUsage) => void;
+  /**
+   * Called before each model call with an estimate of how the request's input
+   * tokens split across system prompt, tool definitions, and conversation
+   * history — the attribution the provider's usage totals don't give you. Watch
+   * `messages` climb across turns to see history dominate a long loop.
+   */
+  onContext?: (breakdown: ContextBreakdown) => void;
   /**
    * Called after each tool result is serialized, with the token cost of the
    * chosen encoding vs JSON. Sum `savedTokens` to log "saved N tokens this run"
@@ -296,6 +321,7 @@ export function createAgent<I, O = string>(
         if (config.temperature !== undefined) {
           req.temperature = config.temperature;
         }
+        reportContext(hooks, systemFor(inputs), tools, messages);
         const res = await callModel(req, signal, hooks);
         trackUsage(res, total, hooks);
 
@@ -500,6 +526,7 @@ export function createAgent<I, O = string>(
           };
           let sawUsage = false;
           let message: LlmResponse | undefined;
+          reportContext(hooks, systemFor(inputs), tools, messages);
           for await (const chunk of client.stream(
             req,
             signal ? { signal } : undefined,
@@ -741,6 +768,26 @@ async function runToolUses<I, O>(
   );
 }
 
+/** Estimate the request's component sizes and report them via `onContext`. */
+function reportContext(
+  hooks: AgentHooks | undefined,
+  systemText: string,
+  tools: LlmTool[],
+  messages: LlmMessage[],
+): void {
+  if (hooks?.onContext === undefined) return;
+  const system = estimateTokens(systemText);
+  const toolsTokens =
+    tools.length > 0 ? estimateTokens(JSON.stringify(tools)) : 0;
+  const messagesTokens = estimateTokens(JSON.stringify(messages));
+  hooks.onContext({
+    system,
+    tools: toolsTokens,
+    messages: messagesTokens,
+    estimatedTotal: system + toolsTokens + messagesTokens,
+  });
+}
+
 /** Compose two callbacks into one that invokes both, `f` first. */
 function chain<T extends (...args: never[]) => void>(
   f: T | undefined,
@@ -769,6 +816,7 @@ function mergeHooks(
     onToolResult: chain(base.onToolResult, extra.onToolResult),
     onError: chain(base.onError, extra.onError),
     onUsage: chain(base.onUsage, extra.onUsage),
+    onContext: chain(base.onContext, extra.onContext),
     onToolResultEncoded: chain(
       base.onToolResultEncoded,
       extra.onToolResultEncoded,

@@ -1165,6 +1165,58 @@ describe("per-call hooks (RunOptions.hooks)", () => {
   });
 });
 
+describe("onContext token attribution", () => {
+  it("reports a per-call breakdown; history grows across turns", async () => {
+    const breakdowns: import("./agent.js").ContextBreakdown[] = [];
+    const search = defineTool({
+      description: "search",
+      input: z.object({ q: z.string() }),
+      run: () => "a result",
+    });
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      description: "You are a helpful assistant.",
+      tools: { search },
+      prompt: () => "go",
+      client: scriptedClient([
+        {
+          stop_reason: "tool_use",
+          content: [
+            { type: "tool_use", id: "t1", name: "search", input: { q: "x" } },
+          ],
+        },
+        { stop_reason: "end_turn", content: [{ type: "text", text: "done" }] },
+      ]),
+      hooks: { onContext: (b) => breakdowns.push(b) },
+    });
+    await agent.run({});
+    expect(breakdowns).toHaveLength(2); // one per model call
+    expect(breakdowns[0]!.system).toBeGreaterThan(0);
+    expect(breakdowns[0]!.tools).toBeGreaterThan(0);
+    expect(breakdowns[0]!.estimatedTotal).toBe(
+      breakdowns[0]!.system + breakdowns[0]!.tools + breakdowns[0]!.messages,
+    );
+    // The conversation carries the tool call + result into the second call.
+    expect(breakdowns[1]!.messages).toBeGreaterThan(breakdowns[0]!.messages);
+  });
+
+  it("merges a per-call onContext over the configured one", async () => {
+    const seen: string[] = [];
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      prompt: () => "hi",
+      client: scriptedClient([
+        { stop_reason: "end_turn", content: [{ type: "text", text: "ok" }] },
+      ]),
+      hooks: { onContext: () => seen.push("config") },
+    });
+    await agent.run({}, { hooks: { onContext: () => seen.push("call") } });
+    expect(seen).toEqual(["config", "call"]);
+  });
+});
+
 describe("sub-agent composition (asTool)", () => {
   it("forwards the caller's cancellation signal to the sub-agent", async () => {
     let started = 0;

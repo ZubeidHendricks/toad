@@ -14,6 +14,7 @@ export {
   type AgentConfig,
   type AgentEvent,
   type AgentHooks,
+  type ContextBreakdown,
   type AgentSession,
   type RunOptions,
   type SessionState,

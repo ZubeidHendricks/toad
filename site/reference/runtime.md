@@ -194,6 +194,23 @@ const agent = createAgent({
 
 `cacheReadTokens` are input tokens served from the prompt cache at a fraction of the input price — in a multi-turn tool loop that's most of the system prompt and tool definitions from turn two onward.
 
+### Where the input tokens go: `onContext`
+
+The provider reports one input total, not a breakdown. The `onContext` hook fires before each model call with an estimate of how that call's input splits across the system prompt, tool definitions, and conversation history — the attribution you need to find what's actually expensive (usually history, which grows every turn):
+
+```ts
+const agent = createAgent({
+  // ...
+  hooks: {
+    onContext: ({ system, tools, messages, estimatedTotal }) => {
+      console.log(`ctx ~${estimatedTotal}: history ${messages}, tools ${tools}, system ${system}`);
+    },
+  },
+});
+```
+
+Estimates are heuristic (relative, not exact billing). For the static counterpart — the fixed prefix before you ever run — use [`toac cost`](/reference/cli#toac-cost).
+
 ## Token-efficient tool results {#toon-serialization}
 
 Tool results that are objects or arrays go back into the conversation as text — and JSON is a verbose way to do that. `toolResultFormat` controls the encoding:

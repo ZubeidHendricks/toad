@@ -118,7 +118,10 @@ The generated agent runs a tool-use loop over the Anthropic API with:
   the tool's input schema; the result is returned as text and `structuredContent`.
 - **Token accounting** — the `onUsage` hook reports per-call and cumulative
   usage, including prompt-cache reads/writes; same-turn tool calls run
-  concurrently.
+  concurrently. The `onContext` hook attributes each call's input tokens across
+  system / tools / history — so you can see history dominate a long loop, which
+  the provider's totals don't break down. (`toac cost` estimates the same fixed
+  prefix statically, before you run.)
 - **Token-efficient tool results** — set `toolResultFormat: "auto"` to feed tool
   results back to the model as TOON instead of JSON when it saves tokens
   (~30–50% on tabular results), so multi-turn loops stay cheap. Defaults to
@@ -191,5 +194,5 @@ copy-paste prompt that turns any LLM into a TOAD author.
 
 ## Status
 
-206 passing tests, green gate (typecheck · test · lint · build). Design docs live
+208 passing tests, green gate (typecheck · test · lint · build). Design docs live
 in [`_bmad-output/`](./_bmad-output/).
