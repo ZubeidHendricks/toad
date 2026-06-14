@@ -55,22 +55,48 @@ const agent = createAgent({
 ```ts
 interface Agent<I, O> {
   readonly name: string;
-  run(inputs: I): Promise<O>;
-  /** Start a multi-turn conversation that keeps history between sends. */
-  session(inputs: I): AgentSession<O>;
+  run(inputs: I, options?: RunOptions): Promise<O>;
+  /** Start (or, with a saved state, resume) a multi-turn conversation. */
+  session(inputs: I, state?: SessionState): AgentSession<O>;
   /** Stream the model's text for the prompt (no tools / structured output). */
-  stream(inputs: I): AsyncIterable<string>;
+  stream(inputs: I, options?: RunOptions): AsyncIterable<string>;
+  /** Run the full tool loop, yielding typed events as they happen. */
+  runStream(inputs: I, options?: RunOptions): AsyncIterable<AgentEvent<O>>;
   /** Expose this agent as a tool that another agent can call. */
-  asTool(options?: { description?: string }): ToolDef<I>;
+  asTool(options?: {
+    description?: string;
+    onUsage?: AgentHooks["onUsage"];
+  }): ToolDef<I>;
 }
 ```
 
+`RunOptions` is `{ signal?: AbortSignal; hooks?: AgentHooks }` — a per-call `signal` (see [Cancellation](#cancellation)) and per-call `hooks`, merged over the configured ones (both fire).
+
+### Streaming text
+
 ```ts
-// streaming
 for await (const delta of agent.stream({ text: "..." })) {
   process.stdout.write(delta);
 }
 ```
+
+### Streaming the whole tool loop {#runstream}
+
+`runStream()` is the streaming counterpart of `run()`: it drives the full tool-use loop and yields a typed `AgentEvent` for each thing that happens, ending with `done`.
+
+```ts
+for await (const ev of agent.runStream(inputs)) {
+  switch (ev.type) {
+    case "text":        process.stdout.write(ev.text); break;       // model text delta
+    case "tool_use":    console.log(`→ ${ev.name}`, ev.input); break; // a tool was called
+    case "tool_result": console.log(`← ${ev.name}`, ev.output); break;
+    case "usage":       /* ev.turn, ev.total: TokenUsage */ break;
+    case "done":        return ev.output; // the final typed result (O)
+  }
+}
+```
+
+`AgentEvent<O>` is the union of `{ type: "text"; text }`, `{ type: "tool_use"; id; name; input }`, `{ type: "tool_result"; id; name; output }`, `{ type: "usage"; turn; total }`, and `{ type: "done"; output: O }`. With `outputs` declared, `done.output` is the validated object; otherwise it's the joined text.
 
 ## Sessions: multi-turn conversations {#sessions}
 
@@ -181,8 +207,8 @@ const agent = createAgent({
   // ...
   toolResultFormat: "auto",
   hooks: {
-    onToolResultEncoded: ({ tool, format, tokensSaved }) => {
-      console.log(`${tool}: ${format}, saved ~${tokensSaved} tokens`);
+    onToolResultEncoded: ({ tool, format, savedTokens }) => {
+      console.log(`${tool}: ${format}, saved ~${savedTokens} tokens`);
     },
   },
 });
@@ -215,7 +241,42 @@ prompt: |
 
 <Mermaid name="composition" />
 
-The sub-agent's typed `inputSchema` becomes the tool's input schema automatically.
+The sub-agent's typed `inputSchema` becomes the tool's input schema automatically. Composition is cost- and cancellation-aware:
+
+- The parent's `AbortSignal` is forwarded to the sub-agent's run, so cancelling the parent cancels its sub-agents.
+- `asTool({ onUsage })` surfaces the sub-agent's token usage, so a parent can roll a whole composition tree's cost into one total:
+
+```ts
+let subTokens = 0;
+const tool = researcher.asTool({
+  onUsage: (turn) => {
+    subTokens += turn.inputTokens + turn.outputTokens;
+  },
+});
+```
+
+## MCP export {#mcp}
+
+`serveMcp` (from `toad-runtime/mcp`) exposes compiled agents as [Model Context Protocol](https://modelcontextprotocol.io) tools over stdio, so any MCP client (Claude Desktop, Claude Code, …) can call them. Each agent becomes one tool whose input schema is its declared `inputs`; calling it runs the full tool-use loop and returns the result as text (and as `structuredContent` for object results).
+
+```ts
+// researcher.mcp.ts
+import { serveMcp } from "toad-runtime/mcp";
+import { researcher } from "./researcher.js";
+
+serveMcp([researcher]);
+```
+
+```json
+// an MCP client's config
+{
+  "mcpServers": {
+    "researcher": { "command": "node", "args": ["researcher.mcp.js"] }
+  }
+}
+```
+
+Pass a record (`{ find: researcher }`) to choose the tool name. The server is a small, dependency-free JSON-RPC 2.0 implementation; `createMcpHandler` is the transport-free core if you need to drive a different transport.
 
 ## Lifecycle & errors
 
