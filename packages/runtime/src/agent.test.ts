@@ -1138,3 +1138,108 @@ describe("runStream", () => {
     );
   });
 });
+
+/** A client that returns a single text reply carrying the given usage. */
+function usageClient(usage: LlmUsage): LlmClient {
+  return {
+    create: async () => ({
+      stop_reason: "end_turn",
+      content: [{ type: "text", text: "ok" }],
+      usage,
+    }),
+  };
+}
+
+describe("per-call hooks (RunOptions.hooks)", () => {
+  it("merges per-call hooks over config hooks — both fire", async () => {
+    const seen: string[] = [];
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      prompt: () => "hi",
+      client: usageClient({ input_tokens: 3, output_tokens: 2 }),
+      hooks: { onUsage: () => seen.push("config") },
+    });
+    await agent.run({}, { hooks: { onUsage: () => seen.push("call") } });
+    expect(seen).toEqual(["config", "call"]);
+  });
+});
+
+describe("sub-agent composition (asTool)", () => {
+  it("forwards the caller's cancellation signal to the sub-agent", async () => {
+    let started = 0;
+    const inner = createAgent({
+      name: "inner",
+      model: "m",
+      inputSchema: z.object({ q: z.string() }),
+      prompt: (i: { q: string }) => i.q,
+      client: {
+        create: async () => {
+          started += 1;
+          return {
+            stop_reason: "end_turn",
+            content: [{ type: "text", text: "x" }],
+          };
+        },
+      },
+    });
+    const tool = inner.asTool();
+    const ac = new AbortController();
+    ac.abort();
+    await expect(
+      tool.run({ q: "hi" }, { signal: ac.signal }),
+    ).rejects.toThrow();
+    // The aborted signal short-circuits before any model call.
+    expect(started).toBe(0);
+  });
+
+  it("surfaces the sub-agent's usage via asTool({ onUsage })", async () => {
+    const inner = createAgent({
+      name: "inner",
+      model: "m",
+      inputSchema: z.object({ q: z.string() }),
+      prompt: (i: { q: string }) => i.q,
+      client: usageClient({ input_tokens: 10, output_tokens: 4 }),
+    });
+    const seen: TokenUsageLike[] = [];
+    const tool = inner.asTool({ onUsage: (turn) => seen.push(turn) });
+    await tool.run({ q: "hi" });
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toMatchObject({ inputTokens: 10, outputTokens: 4 });
+  });
+
+  it("rolls sub-agent usage up into a parent total", async () => {
+    const inner = createAgent({
+      name: "inner",
+      model: "m",
+      inputSchema: z.object({ q: z.string() }),
+      prompt: (i: { q: string }) => i.q,
+      client: usageClient({ input_tokens: 10, output_tokens: 4 }),
+    });
+    let subTokens = 0;
+    const tool = inner.asTool({
+      onUsage: (turn) => {
+        subTokens += turn.inputTokens + turn.outputTokens;
+      },
+    });
+    const parent = createAgent({
+      name: "parent",
+      model: "m",
+      tools: { inner: tool },
+      prompt: () => "go",
+      client: scriptedClient([
+        {
+          stop_reason: "tool_use",
+          content: [
+            { type: "tool_use", id: "t1", name: "inner", input: { q: "hi" } },
+          ],
+        },
+        { stop_reason: "end_turn", content: [{ type: "text", text: "done" }] },
+      ]),
+    });
+    expect(await parent.run({})).toBe("done");
+    expect(subTokens).toBe(14);
+  });
+});
+
+type TokenUsageLike = { inputTokens: number; outputTokens: number };

@@ -12,7 +12,7 @@ import {
   type LlmUsage,
 } from "./client.js";
 import { MaxTurnsError, OutputParseError, ToolError } from "./errors.js";
-import type { AnyToolDef, ToolDef } from "./tool.js";
+import type { AnyToolDef, ToolDef, ToolRunContext } from "./tool.js";
 
 const RESPOND_TOOL = "respond";
 
@@ -104,6 +104,12 @@ export interface AgentConfig<I, O> {
 export interface RunOptions {
   /** Abort the run: cancels the in-flight model call and is visible to tools. */
   signal?: AbortSignal;
+  /**
+   * Hooks for just this call, merged over (not replacing) the agent's
+   * configured `hooks` — both fire, config first. Useful for observing one
+   * run, e.g. rolling a sub-agent's usage up into a parent (see `asTool`).
+   */
+  hooks?: AgentHooks;
 }
 
 /**
@@ -165,8 +171,15 @@ export interface Agent<I, O> {
    * `done` event. The streaming counterpart of `run()`.
    */
   runStream(inputs: I, options?: RunOptions): AsyncIterable<AgentEvent<O>>;
-  /** Expose this agent as a tool that another agent can call. */
-  asTool(options?: { description?: string }): ToolDef<I>;
+  /**
+   * Expose this agent as a tool that another agent can call. The caller's
+   * cancellation signal is forwarded to this agent's run; pass `onUsage` to
+   * observe this sub-agent's token usage (e.g. to roll it up into a parent).
+   */
+  asTool(options?: {
+    description?: string;
+    onUsage?: AgentHooks["onUsage"];
+  }): ToolDef<I>;
 }
 
 /**
@@ -206,11 +219,11 @@ export function createAgent<I, O = string>(
 
   const makeSession = (inputs: I, state?: SessionState): AgentSession<O> => {
     const client = config.client ?? anthropicClient();
-    const hooks = config.hooks;
     const attempts = (config.retries ?? 0) + 1;
     const callModel = async (
       req: LlmRequest,
       signal: AbortSignal | undefined,
+      hooks: AgentHooks | undefined,
     ): Promise<LlmResponse> => {
       let lastError: unknown;
       for (let attempt = 0; attempt < attempts; attempt++) {
@@ -241,6 +254,7 @@ export function createAgent<I, O = string>(
 
     const send = async (message?: string, options?: RunOptions): Promise<O> => {
       const signal = options?.signal;
+      const hooks = mergeHooks(config.hooks, options?.hooks);
       let userText: string;
       if (!started) {
         started = true;
@@ -282,7 +296,7 @@ export function createAgent<I, O = string>(
         if (config.temperature !== undefined) {
           req.temperature = config.temperature;
         }
-        const res = await callModel(req, signal);
+        const res = await callModel(req, signal, hooks);
         trackUsage(res, total, hooks);
 
         const toolUses = res.content.filter(
@@ -326,7 +340,13 @@ export function createAgent<I, O = string>(
 
         // Tools within one turn run concurrently (the model asked for all of
         // them at once); results are sent back in the model's request order.
-        const execs = await runToolUses(toolUses, toolDefs, config, signal);
+        const execs = await runToolUses(
+          toolUses,
+          toolDefs,
+          config,
+          signal,
+          hooks,
+        );
         messages.push({ role: "user", content: execs.map((e) => e.content) });
       }
 
@@ -429,6 +449,7 @@ export function createAgent<I, O = string>(
     runStream(inputs: I, options?: RunOptions): AsyncIterable<AgentEvent<O>> {
       const client = config.client ?? anthropicClient();
       const signal = options?.signal;
+      const hooks = mergeHooks(config.hooks, options?.hooks);
       async function* generate(): AsyncGenerator<AgentEvent<O>> {
         if (client.stream === undefined) {
           throw new Error(
@@ -509,7 +530,7 @@ export function createAgent<I, O = string>(
             total.cacheReadTokens += turnUsage.cacheReadTokens;
             total.cacheWriteTokens += turnUsage.cacheWriteTokens;
             const totalSnapshot = { ...total };
-            config.hooks?.onUsage?.({ ...turnUsage }, totalSnapshot);
+            hooks?.onUsage?.({ ...turnUsage }, totalSnapshot);
             yield {
               type: "usage",
               turn: { ...turnUsage },
@@ -554,7 +575,13 @@ export function createAgent<I, O = string>(
               input: tu.input,
             };
           }
-          const execs = await runToolUses(toolUses, toolDefs, config, signal);
+          const execs = await runToolUses(
+            toolUses,
+            toolDefs,
+            config,
+            signal,
+            hooks,
+          );
           for (const e of execs) {
             yield {
               type: "tool_result",
@@ -578,7 +605,16 @@ export function createAgent<I, O = string>(
           config.description ??
           `Run the ${config.name} agent.`,
         input,
-        run: (value: I) => agent.run(value),
+        run: (value: I, ctx?: ToolRunContext) => {
+          // Forward the parent's cancellation, and optionally surface this
+          // sub-agent's usage so a composition tree's cost can be aggregated.
+          const runOptions: RunOptions = {};
+          if (ctx?.signal !== undefined) runOptions.signal = ctx.signal;
+          if (options?.onUsage !== undefined) {
+            runOptions.hooks = { onUsage: options.onUsage };
+          }
+          return agent.run(value, runOptions);
+        },
       };
     },
   };
@@ -646,8 +682,8 @@ async function runToolUses<I, O>(
   toolDefs: Record<string, AnyToolDef>,
   config: AgentConfig<I, O>,
   signal: AbortSignal | undefined,
+  hooks: AgentHooks | undefined,
 ): Promise<ToolExecution[]> {
-  const hooks = config.hooks;
   return Promise.all(
     toolUses.map(async (tu): Promise<ToolExecution> => {
       const def = toolDefs[tu.name];
@@ -703,6 +739,41 @@ async function runToolUses<I, O>(
       };
     }),
   );
+}
+
+/** Compose two callbacks into one that invokes both, `f` first. */
+function chain<T extends (...args: never[]) => void>(
+  f: T | undefined,
+  g: T | undefined,
+): T | undefined {
+  if (f === undefined) return g;
+  if (g === undefined) return f;
+  return ((...args: Parameters<T>) => {
+    f(...args);
+    g(...args);
+  }) as T;
+}
+
+/**
+ * Merge per-call hooks over the agent's configured hooks: for each event both
+ * fire, `base` (config) first. Returns whichever is defined when only one is.
+ */
+function mergeHooks(
+  base: AgentHooks | undefined,
+  extra: AgentHooks | undefined,
+): AgentHooks | undefined {
+  if (base === undefined) return extra;
+  if (extra === undefined) return base;
+  return {
+    onToolCall: chain(base.onToolCall, extra.onToolCall),
+    onToolResult: chain(base.onToolResult, extra.onToolResult),
+    onError: chain(base.onError, extra.onError),
+    onUsage: chain(base.onUsage, extra.onUsage),
+    onToolResultEncoded: chain(
+      base.onToolResultEncoded,
+      extra.onToolResultEncoded,
+    ),
+  };
 }
 
 /**

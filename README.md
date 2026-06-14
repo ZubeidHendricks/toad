@@ -87,7 +87,10 @@ type-checked against the declared input.
 The generated agent runs a tool-use loop over the Anthropic API with:
 
 - **Structured output** — declared `outputs` become a typed, validated result.
-- **Composition** — use one agent as another's tool (`uses:` or `agent.asTool()`).
+- **Composition** — use one agent as another's tool (`uses:` or `agent.asTool()`);
+  the parent's cancellation reaches the sub-agent, and `asTool({ onUsage })` rolls
+  a sub-agent's token usage up into the parent. Any call also takes per-call
+  `hooks` (merged over the configured ones) via `run(inputs, { hooks })`.
 - **Lifecycle** — `retries`, `maxTurns`, and `onToolCall` / `onToolResult` /
   `onError` hooks.
 - **Sessions** — `agent.session(inputs)` keeps multi-turn conversation history
@@ -171,5 +174,5 @@ copy-paste prompt that turns any LLM into a TOAD author.
 
 ## Status
 
-163 passing tests, green gate (typecheck · test · lint · build). Design docs live
+167 passing tests, green gate (typecheck · test · lint · build). Design docs live
 in [`_bmad-output/`](./_bmad-output/).
