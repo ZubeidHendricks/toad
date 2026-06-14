@@ -101,3 +101,54 @@ describe("toac init", () => {
     expect(await run(["init"], silent)).toBe(1);
   });
 });
+
+describe("toac fmt", () => {
+  const UGLY = "model:   m\nagent: a\nprompt: hi\n";
+  const CANON = "agent: a\nmodel: m\nprompt: hi\n";
+
+  it("rewrites a file in canonical form and exits 0", async () => {
+    const file = join(dir, "a.agent");
+    await writeFile(file, UGLY);
+    expect(await run(["fmt", file], silent)).toBe(0);
+    expect(await readFile(file, "utf8")).toBe(CANON);
+  });
+
+  it("leaves an already-formatted file byte-for-byte", async () => {
+    const file = join(dir, "a.agent");
+    await writeFile(file, CANON);
+    expect(await run(["fmt", file], silent)).toBe(0);
+    expect(await readFile(file, "utf8")).toBe(CANON);
+  });
+
+  it("--check exits 1 and writes nothing when a file needs formatting", async () => {
+    const file = join(dir, "a.agent");
+    await writeFile(file, UGLY);
+    const errors: string[] = [];
+    const code = await run(["fmt", "--check", file], {
+      log: () => {},
+      error: (line) => errors.push(line),
+    });
+    expect(code).toBe(1);
+    expect(errors.join("\n")).toContain("would reformat");
+    // Unchanged on disk.
+    expect(await readFile(file, "utf8")).toBe(UGLY);
+  });
+
+  it("--check exits 0 for an already-formatted file", async () => {
+    const file = join(dir, "a.agent");
+    await writeFile(file, CANON);
+    expect(await run(["fmt", "--check", file], silent)).toBe(0);
+  });
+
+  it("reports diagnostics and exits 1 for an invalid file", async () => {
+    const file = join(dir, "bad.agent");
+    await writeFile(file, "model: m\n");
+    const errors: string[] = [];
+    const code = await run(["fmt", file], {
+      log: () => {},
+      error: (line) => errors.push(line),
+    });
+    expect(code).toBe(1);
+    expect(errors.join("\n")).toContain("TOA203");
+  });
+});

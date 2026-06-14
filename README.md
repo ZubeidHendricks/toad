@@ -153,12 +153,18 @@ npm i -g toad-compiler
 npm i toad-runtime @anthropic-ai/sdk
 ```
 
-Scaffold and compile an agent:
+Scaffold, format, and compile an agent:
 
 ```bash
 toac init researcher        # → researcher.agent + researcher.tools.ts
+toac fmt researcher.agent   # canonical formatting (use --check in CI)
 toac build researcher.agent # → researcher.ts (typed TypeScript)
 ```
+
+`toac fmt` is the canonical formatter — like gofmt/rustfmt. It reorders keys to
+the spec's schema order and normalizes indentation, spacing, and blank lines,
+while preserving prompt/system block content exactly (it re-parses its own output
+and refuses to write if the meaning would change).
 
 [![toad-compiler version](https://img.shields.io/npm/v/toad-compiler?label=toad-compiler)](https://www.npmjs.com/package/toad-compiler)
 [![toad-compiler downloads](https://img.shields.io/npm/dt/toad-compiler?label=downloads)](https://www.npmjs.com/package/toad-compiler)
@@ -184,5 +190,5 @@ copy-paste prompt that turns any LLM into a TOAD author.
 
 ## Status
 
-178 passing tests, green gate (typecheck · test · lint · build). Design docs live
+190 passing tests, green gate (typecheck · test · lint · build). Design docs live
 in [`_bmad-output/`](./_bmad-output/).

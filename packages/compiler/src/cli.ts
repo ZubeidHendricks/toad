@@ -1,6 +1,11 @@
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
-import { compile, COMPILER_VERSION, renderDiagnostic } from "./index.js";
+import {
+  compile,
+  COMPILER_VERSION,
+  formatAgent,
+  renderDiagnostic,
+} from "./index.js";
 
 export interface Logger {
   log: (line: string) => void;
@@ -13,7 +18,7 @@ const consoleLogger: Logger = {
 };
 
 const USAGE =
-  "usage: toac <build|check> <paths...> [--outDir <dir>] | toac init <name>";
+  "usage: toac <build|check> <paths...> [--outDir <dir>] | toac fmt [--check] <paths...> | toac init <name>";
 
 // Starter files for `toac init <name>`: a minimal tool-using agent plus the
 // co-located tools module the generated import expects.
@@ -62,6 +67,9 @@ export async function run(
   }
   if (command === "init") {
     return init(rest, logger);
+  }
+  if (command === "fmt") {
+    return fmt(rest, logger);
   }
   if (command !== "build" && command !== "check") {
     logger.error(USAGE);
@@ -142,6 +150,51 @@ async function init(args: string[], logger: Logger): Promise<number> {
   logger.log(`created ${toolsPath}`);
   logger.log(`next: toac build ${agentPath}`);
   return 0;
+}
+
+/**
+ * `toac fmt [--check] <paths...>`: rewrite `.agent` files in canonical form.
+ * With `--check`, write nothing — list the files that are not already formatted
+ * and exit non-zero (for CI). Invalid files are reported, never rewritten.
+ */
+async function fmt(args: string[], logger: Logger): Promise<number> {
+  const check = args.includes("--check");
+  const paths = args.filter((a) => a !== "--check");
+  const files = await collectAgentFiles(paths);
+  if (files.length === 0) {
+    logger.error("toac: no .agent files found");
+    return 1;
+  }
+
+  let hadError = false;
+  const unformatted: string[] = [];
+  for (const file of files) {
+    const source = await readFile(file, "utf8");
+    const { code, changed, diagnostics } = formatAgent(source, file);
+    if (diagnostics.length > 0 || code === undefined) {
+      for (const d of diagnostics) logger.error(renderDiagnostic(d, source));
+      hadError = true;
+      continue;
+    }
+    if (!changed) {
+      continue;
+    }
+    if (check) {
+      unformatted.push(file);
+      continue;
+    }
+    await writeFile(file, code, "utf8");
+    logger.log(`formatted ${file}`);
+  }
+
+  if (check && unformatted.length > 0) {
+    for (const file of unformatted) logger.error(`would reformat ${file}`);
+    logger.error(
+      `${unformatted.length} file(s) need formatting; run \`toac fmt\``,
+    );
+    return 1;
+  }
+  return hadError ? 1 : 0;
 }
 
 async function collectAgentFiles(paths: string[]): Promise<string[]> {

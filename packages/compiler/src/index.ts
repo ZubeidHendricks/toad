@@ -19,6 +19,7 @@ export { decodeToon, type DecodeToonResult } from "./toon.js";
 export { preprocess, type PreprocessResult } from "./preprocess.js";
 export { analyze, type AnalyzeResult } from "./analyze.js";
 export { generate } from "./codegen.js";
+export { formatAgent, type FormatResult } from "./format.js";
 export type {
   AgentAst,
   FieldDecl,
