@@ -70,7 +70,12 @@ A trailing `?` on a name (`detail?,string`) marks the field **optional**: caller
 
 ### 4.5 `tools`
 
-A TOON list `tools[N]: a,b,…` of exactly `N` unique identifiers. Tool names bind to implementations supplied at runtime (in TOAD, a co-located `<agent>.tools.ts`).
+Tools take one of two forms:
+
+- **Bare names** — a TOON list `tools[N]: a,b,…` of exactly `N` unique identifiers. Each name binds to a complete tool implementation supplied at runtime (in TOAD, a co-located `<agent>.tools.ts`), which carries its own input schema.
+- **Typed** — a TOON tabular array `tools[N]{name,input}:` (optionally `tools[N]{name,input,description}:`) of exactly `N` rows. Each `name` MUST be a unique identifier; `input` MUST be an **object type** (§5) describing the tool's arguments; `description`, when present, is the human-readable description offered to the model. In the typed form the document is the single source of truth for the tool's input schema: conforming compilers MUST emit that schema and a typed binding such that the runtime implementation supplies only the tool body, type-checked against the declared input.
+
+A document MAY use either form; the two MUST NOT be mixed within one `tools` value (a TOON list is all names; a tabular array is all rows). Tool names MUST be unique across the `tools` value.
 
 ### 4.6 `prompt`
 
@@ -153,7 +158,7 @@ Conforming compilers MUST report, with source location (`file:line:col`):
 - missing required keys; unknown keys; malformed values
 - TOON structural errors (including `[N]` count mismatches)
 - duplicate input/output/tool names
-- type-grammar violations
+- type-grammar violations; a typed tool (§4.5) whose `input` is not an object type
 - template errors: undeclared references, bad field access, unclosed or mismatched blocks, destructuring over non-object element types, non-boolean `#if` conditions, non-array `#each` subjects
 
 A document with no error diagnostics is a **valid agent document**.

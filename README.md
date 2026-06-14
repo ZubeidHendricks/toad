@@ -68,6 +68,20 @@ Types are `string` / `number` / `boolean`, a quoted object like
 `"{a:string;b:number}"`, and any of those with `[]`. Every reference is validated
 against the agent's typed inputs, with located `file:line:col` diagnostics.
 
+Tools can be **bare names** (`tools[2]: web_search,fetch_page`) — the body in
+`<agent>.tools.ts` owns its schema — or **typed**, where the `.agent` file owns
+the input schema and the body supplies only `run`:
+
+```
+tools[2]{name,input}:
+  web_search,"{query:string}"
+  fetch_page,"{url:string}"
+```
+
+`toac` then generates the Zod schema and a typed `defineTool`, so
+`<agent>.tools.ts` is just `export const web_search = (i: WebSearchInput) => …`,
+type-checked against the declared input.
+
 ## The runtime (`toad-runtime`)
 
 The generated agent runs a tool-use loop over the Anthropic API with:
@@ -157,5 +171,5 @@ copy-paste prompt that turns any LLM into a TOAD author.
 
 ## Status
 
-152 passing tests, green gate (typecheck · test · lint · build). Design docs live
+163 passing tests, green gate (typecheck · test · lint · build). Design docs live
 in [`_bmad-output/`](./_bmad-output/).

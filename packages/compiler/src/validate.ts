@@ -1,5 +1,11 @@
 import type { JsonObject, JsonValue } from "@toon-format/toon";
-import type { AgentAst, FieldDecl, PromptSegment, ToaType } from "./ast.js";
+import type {
+  AgentAst,
+  FieldDecl,
+  PromptSegment,
+  ToaType,
+  ToolDecl,
+} from "./ast.js";
 import { errorDiagnostic, type Diagnostic } from "./diagnostics.js";
 import { parsePromptTemplate } from "./interpolate.js";
 
@@ -330,7 +336,7 @@ function parseTools(
   file: string,
   diagnostics: Diagnostic[],
   at: Locator,
-): string[] {
+): ToolDecl[] {
   const arr = obj.tools;
   if (arr === undefined) {
     return [];
@@ -339,29 +345,97 @@ function parseTools(
     diagnostics.push(
       errorDiagnostic(
         "TOA220",
-        `"tools" must be an array of names`,
+        `"tools" must be a list of names or {name,input} rows`,
         file,
         at("tools"),
       ),
     );
     return [];
   }
-  const names: string[] = [];
-  for (const t of arr) {
-    if (typeof t !== "string" || !IDENT.test(t)) {
+  const tools: ToolDecl[] = [];
+  const seen = new Set<string>();
+  const push = (decl: ToolDecl): void => {
+    if (seen.has(decl.name)) {
       diagnostics.push(
         errorDiagnostic(
-          "TOA221",
-          `tool name must be an identifier, got ${JSON.stringify(t)}`,
+          "TOA224",
+          `duplicate tool name "${decl.name}"`,
           file,
           at("tools"),
         ),
       );
+      return;
+    }
+    seen.add(decl.name);
+    tools.push(decl);
+  };
+  for (const t of arr) {
+    // Bare-name form (`tools[N]: a,b`): just the tool name, body in `.tools.ts`.
+    if (typeof t === "string") {
+      if (!IDENT.test(t)) {
+        diagnostics.push(badToolName(t, file, at));
+        continue;
+      }
+      push({ name: t });
       continue;
     }
-    names.push(t);
+    // Typed tabular form (`tools[N]{name,input}:`): the compiler owns the
+    // input schema; the tools file supplies only the typed `run` body.
+    if (isObject(t) && typeof t.name === "string") {
+      const name = t.name;
+      if (!IDENT.test(name)) {
+        diagnostics.push(badToolName(name, file, at));
+        continue;
+      }
+      if (typeof t.input !== "string") {
+        diagnostics.push(
+          errorDiagnostic(
+            "TOA222",
+            `typed tool "${name}" needs a string input type`,
+            file,
+            at("tools"),
+          ),
+        );
+        continue;
+      }
+      const input = parseType(t.input);
+      if (input === undefined || input.base !== "object" || input.array) {
+        diagnostics.push(
+          errorDiagnostic(
+            "TOA223",
+            `tool "${name}" input must be an object type like "{query:string}"`,
+            file,
+            at("tools"),
+          ),
+        );
+        continue;
+      }
+      const decl: ToolDecl = { name, input };
+      if (typeof t.description === "string") {
+        decl.description = t.description;
+      }
+      push(decl);
+      continue;
+    }
+    diagnostics.push(
+      errorDiagnostic(
+        "TOA221",
+        `each tool must be a name or a {name,input} row, got ${JSON.stringify(t)}`,
+        file,
+        at("tools"),
+      ),
+    );
   }
-  return names;
+  return tools;
+}
+
+function badToolName(value: unknown, file: string, at: Locator): Diagnostic {
+  return errorDiagnostic(
+    "TOA221",
+    `tool name must be an identifier, got ${JSON.stringify(value)}`,
+    file,
+    at("tools"),
+  );
 }
 
 function parsePrompt(

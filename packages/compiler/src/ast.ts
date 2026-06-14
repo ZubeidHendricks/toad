@@ -21,6 +21,21 @@ export interface FieldDecl {
   optional?: boolean;
 }
 
+/**
+ * A declared tool. The bare-name form (`tools[N]: a,b`) yields just a `name`,
+ * binding to a `ToolDef` in the co-located `<agent>.tools.ts`. The typed
+ * tabular form (`tools[N]{name,input}:`) additionally carries the tool's input
+ * type, so the compiler owns the schema and the tools file supplies only the
+ * `run` body.
+ */
+export interface ToolDecl {
+  name: string;
+  /** Declared input type (typed form only); an object type per §5. */
+  input?: ToaType;
+  /** Optional description sent to the model (the `{name,input,description}` form). */
+  description?: string;
+}
+
 /** The binding of an `{#each}` loop: a single name or a destructure pattern. */
 export type EachItem =
   | { kind: "name"; name: string }
@@ -52,8 +67,8 @@ export interface AgentAst {
   description?: string;
   inputs: FieldDecl[];
   outputs: FieldDecl[];
-  /** Tool names; resolved against the co-located `<name>.tools.ts`. */
-  tools: string[];
+  /** Declared tools; resolved against the co-located `<name>.tools.ts`. */
+  tools: ToolDecl[];
   /** Sub-agent names used as tools (wired via `asTool()`). */
   uses: string[];
   prompt: PromptSegment[];
