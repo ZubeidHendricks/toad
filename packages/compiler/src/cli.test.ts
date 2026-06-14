@@ -152,3 +152,45 @@ describe("toac fmt", () => {
     expect(errors.join("\n")).toContain("TOA203");
   });
 });
+
+describe("toac cost", () => {
+  const AGENT =
+    "agent: a\nmodel: m\nprompt: |\n  hi\noutputs[1]{name,type}:\n  out,string\n";
+
+  it("prints an estimate and exits 0", async () => {
+    const file = join(dir, "a.agent");
+    await writeFile(file, AGENT);
+    const out: string[] = [];
+    const code = await run(["cost", file], {
+      log: (l) => out.push(l),
+      error: () => {},
+    });
+    expect(code).toBe(0);
+    expect(out.join("\n")).toContain("fixed prefix / turn");
+  });
+
+  it("--json emits a machine-readable report", async () => {
+    const file = join(dir, "a.agent");
+    await writeFile(file, AGENT);
+    const out: string[] = [];
+    await run(["cost", "--json", file], {
+      log: (l) => out.push(l),
+      error: () => {},
+    });
+    const parsed = JSON.parse(out.join("\n"));
+    expect(parsed[0].file).toBe(file);
+    expect(typeof parsed[0].fixedTotal).toBe("number");
+  });
+
+  it("exits 1 and reports diagnostics for an invalid file", async () => {
+    const file = join(dir, "bad.agent");
+    await writeFile(file, "model: m\n");
+    const errors: string[] = [];
+    const code = await run(["cost", file], {
+      log: () => {},
+      error: (l) => errors.push(l),
+    });
+    expect(code).toBe(1);
+    expect(errors.join("\n")).toContain("TOA203");
+  });
+});

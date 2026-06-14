@@ -1,9 +1,12 @@
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
 import {
+  analyze,
   compile,
   COMPILER_VERSION,
+  estimateAgentCost,
   formatAgent,
+  formatCostReport,
   renderDiagnostic,
 } from "./index.js";
 
@@ -18,7 +21,7 @@ const consoleLogger: Logger = {
 };
 
 const USAGE =
-  "usage: toac <build|check> <paths...> [--outDir <dir>] | toac fmt [--check] <paths...> | toac init <name>";
+  "usage: toac <build|check> <paths...> [--outDir <dir>] | toac fmt [--check] <paths...> | toac cost [--json] <paths...> | toac init <name>";
 
 // Starter files for `toac init <name>`: a minimal tool-using agent plus the
 // co-located tools module the generated import expects.
@@ -70,6 +73,9 @@ export async function run(
   }
   if (command === "fmt") {
     return fmt(rest, logger);
+  }
+  if (command === "cost") {
+    return cost(rest, logger);
   }
   if (command !== "build" && command !== "check") {
     logger.error(USAGE);
@@ -194,6 +200,42 @@ async function fmt(args: string[], logger: Logger): Promise<number> {
     );
     return 1;
   }
+  return hadError ? 1 : 0;
+}
+
+/**
+ * `toac cost [--json] <paths...>`: estimate each agent's per-turn token
+ * footprint (the fixed prefix sent every call). Heuristic and offline. With
+ * `--json`, emit `{ file, ...report }` per agent for tracking in CI.
+ */
+async function cost(args: string[], logger: Logger): Promise<number> {
+  const asJson = args.includes("--json");
+  const paths = args.filter((a) => a !== "--json");
+  const files = await collectAgentFiles(paths);
+  if (files.length === 0) {
+    logger.error("toac: no .agent files found");
+    return 1;
+  }
+
+  let hadError = false;
+  const reports: unknown[] = [];
+  for (const file of files) {
+    const source = await readFile(file, "utf8");
+    const { ast, diagnostics } = analyze(source, file);
+    if (ast === undefined) {
+      for (const d of diagnostics) logger.error(renderDiagnostic(d, source));
+      hadError = true;
+      continue;
+    }
+    const report = estimateAgentCost(ast);
+    if (asJson) {
+      reports.push({ file, ...report });
+    } else {
+      logger.log(formatCostReport(file, report));
+      logger.log("");
+    }
+  }
+  if (asJson) logger.log(JSON.stringify(reports, null, 2));
   return hadError ? 1 : 0;
 }
 

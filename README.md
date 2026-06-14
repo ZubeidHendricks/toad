@@ -158,6 +158,7 @@ Scaffold, format, and compile an agent:
 ```bash
 toac init researcher        # → researcher.agent + researcher.tools.ts
 toac fmt researcher.agent   # canonical formatting (use --check in CI)
+toac cost researcher.agent  # estimate the per-turn token footprint
 toac build researcher.agent # → researcher.ts (typed TypeScript)
 ```
 
@@ -190,5 +191,5 @@ copy-paste prompt that turns any LLM into a TOAD author.
 
 ## Status
 
-190 passing tests, green gate (typecheck · test · lint · build). Design docs live
+206 passing tests, green gate (typecheck · test · lint · build). Design docs live
 in [`_bmad-output/`](./_bmad-output/).

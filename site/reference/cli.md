@@ -11,6 +11,7 @@ npm i -g toad-compiler
 ```bash
 toac <build|check> <paths...> [--outDir <dir>]
 toac fmt [--check] <paths...>
+toac cost [--json] <paths...>
 toac init <name>
 ```
 
@@ -63,12 +64,32 @@ toac fmt --check agents/   # write nothing; list files that need formatting, exi
 
 `--check` makes it a CI gate (no writes, non-zero exit when something isn't formatted).
 
+### `toac cost`
+
+Estimate an agent's **per-turn token footprint** before you run it — the fixed prefix (system prompt + tool schemas + the structured-output schema) sent on every model call, which is exactly the part prompt caching serves cheaply. This is the floor you pay each turn, so it's the number to watch and shrink.
+
+```bash
+toac cost researcher.agent
+# researcher.agent — estimated per-turn tokens (heuristic)
+#
+#   system prompt         ~13
+#   output schema         ~84
+#   ──────────────────────────────────
+#   fixed prefix / turn   ~97
+#
+#   prompt template       ~36  (excludes interpolated values)
+#   bare tools            2 — schema in .tools.ts, not visible to toac
+```
+
+`--json` emits `{ file, ...report }` per agent, for tracking the number in CI over time. Estimates are heuristic and offline (no provider tokenizer); treat them as relative — compare agents, or before/after a change. Tool-result and conversation-history tokens are runtime-dependent; the runtime reports those.
+
 ## Flags
 
 | Flag             | Meaning                                            |
 | ---------------- | -------------------------------------------------- |
 | `--outDir <dir>` | Write compiled `.ts` files into `<dir>` instead of next to the source (`build`) |
 | `--check`        | `fmt` only: write nothing, list files needing formatting, exit non-zero if any |
+| `--json`         | `cost` only: emit a machine-readable report per agent |
 | `--version`, `-v` | Print the compiler version                         |
 
 ## Diagnostics & exit codes
