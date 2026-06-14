@@ -27,12 +27,12 @@ describe("{#each} parsing", () => {
 
   it("reports an unclosed each", () => {
     const { errors } = parsePromptTemplate("{#each inputs.xs as x}\n- {x}");
-    expect(errors.some((e) => /unclosed/.test(e))).toBe(true);
+    expect(errors.some((e) => /unclosed/.test(e.message))).toBe(true);
   });
 
   it("reports an invalid each header", () => {
     const { errors } = parsePromptTemplate("{#each nope}\n{/each}");
-    expect(errors.some((e) => /invalid \{#each\}/.test(e))).toBe(true);
+    expect(errors.some((e) => /invalid \{#each\}/.test(e.message))).toBe(true);
   });
 });
 

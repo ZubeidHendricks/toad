@@ -29,7 +29,7 @@ describe("parsePromptTemplate", () => {
   it("reports an unterminated interpolation", () => {
     const { errors } = parsePromptTemplate("hello {inputs.topic");
     expect(errors).toHaveLength(1);
-    expect(errors[0]).toMatch(/unterminated/);
+    expect(errors[0]?.message).toMatch(/unterminated/);
   });
 
   it("reports an empty/invalid interpolation", () => {

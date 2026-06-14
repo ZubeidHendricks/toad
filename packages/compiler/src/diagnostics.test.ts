@@ -191,6 +191,52 @@ describe("row-level locations for tabular fields", () => {
     expect(d).toMatchObject({ line: 5, col: 3 });
   });
 
+  it("locates an unclosed block at its line inside the prompt (TOA302)", () => {
+    const src = [
+      "agent: a",
+      "model: m",
+      "inputs[1]{name,type}:",
+      "  xs,string[]",
+      "prompt: |",
+      "  {#each inputs.xs as x}",
+      "  - {x}",
+    ].join("\n");
+    const d = analyze(src, "x.agent").diagnostics.find(
+      (x) => x.code === "TOA302",
+    );
+    expect(d).toMatchObject({ line: 6, col: 3 });
+  });
+
+  it("locates a malformed interpolation at its prompt line (TOA302)", () => {
+    const src = [
+      "agent: a",
+      "model: m",
+      "prompt: |",
+      "  Line one.",
+      "  Then {bad..path} here.",
+    ].join("\n");
+    const d = analyze(src, "x.agent").diagnostics.find(
+      (x) => x.code === "TOA302",
+    );
+    expect(d?.line).toBe(5);
+  });
+
+  it("locates errors in a system block, not the prompt block", () => {
+    const src = [
+      "agent: a",
+      "model: m",
+      "prompt: |",
+      "  hi",
+      "system: |",
+      "  {#if inputs.x}",
+      "  on",
+    ].join("\n");
+    const d = analyze(src, "x.agent").diagnostics.find(
+      (x) => x.code === "TOA302",
+    );
+    expect(d?.line).toBe(6); // the {#if} line in the system block
+  });
+
   it("records tabular-header key lines (so their diagnostics are located)", () => {
     // `inputs[N]{...}:` is a top-level key; its line must be tracked.
     const src = [

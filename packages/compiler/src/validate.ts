@@ -135,12 +135,26 @@ export function validate(
   const temperature = parseTemperature(value, file, diagnostics, at);
   const prompt =
     typeof promptText === "string"
-      ? parsePrompt(promptText, inputs, file, diagnostics, at)
+      ? parsePrompt(
+          promptText,
+          inputs,
+          file,
+          diagnostics,
+          keyLines.get("prompt"),
+          srcLines,
+        )
       : [];
   let system: PromptSegment[] | undefined;
   if (value.system !== undefined) {
     if (typeof value.system === "string") {
-      system = parsePrompt(value.system, inputs, file, diagnostics, at);
+      system = parsePrompt(
+        value.system,
+        inputs,
+        file,
+        diagnostics,
+        keyLines.get("system"),
+        srcLines,
+      );
     } else {
       diagnostics.push(
         errorDiagnostic(
@@ -487,27 +501,57 @@ function parsePrompt(
   inputs: FieldDecl[],
   file: string,
   diagnostics: Diagnostic[],
-  at: Locator,
+  blockLine: number | undefined,
+  srcLines: string[] | undefined,
 ): AgentAst["prompt"] {
+  // Map a character offset in the (dedented) block text to a source location.
+  // The block body starts one line below its `key: |` header, and the dedent
+  // preserves line count, so block line k is source line blockLine + 1 + k.
+  const locFor = (offset: number): DiagnosticLoc => {
+    if (blockLine === undefined) return {};
+    if (srcLines === undefined) return { line: blockLine };
+    const lineNo = blockLine + 1 + countNewlines(text, offset);
+    const srcText = srcLines[lineNo - 1] ?? "";
+    const trimmed = srcText.trim();
+    if (trimmed === "") return { line: lineNo };
+    return {
+      line: lineNo,
+      col: srcText.length - srcText.trimStart().length + 1,
+      length: trimmed.length,
+    };
+  };
+
   const ctx: PromptScopeCtx = {
     inputTypes: new Map(inputs.map((f) => [f.name, f.type])),
     file,
     diagnostics,
-    at,
+    header: { line: blockLine },
   };
   const { segments, errors } = parsePromptTemplate(text);
-  for (const message of errors) {
-    diagnostics.push(errorDiagnostic("TOA302", message, file, at("prompt")));
+  for (const e of errors) {
+    diagnostics.push(
+      errorDiagnostic("TOA302", e.message, file, locFor(e.offset)),
+    );
   }
   validatePromptSegments(segments, new Map(), ctx);
   return segments;
+}
+
+/** Count newline characters in `text` before `offset` (0-based line index). */
+function countNewlines(text: string, offset: number): number {
+  let n = 0;
+  for (let i = 0; i < offset && i < text.length; i++) {
+    if (text[i] === "\n") n++;
+  }
+  return n;
 }
 
 interface PromptScopeCtx {
   inputTypes: Map<string, ToaType>;
   file: string;
   diagnostics: Diagnostic[];
-  at: Locator;
+  /** Location of the block's `key: |` header — the anchor for semantic errors. */
+  header: DiagnosticLoc;
 }
 
 const NUMBER_TYPE: ToaType = { base: "number", array: false };
@@ -540,7 +584,7 @@ function badInterp(path: string[], ctx: PromptScopeCtx): void {
       "TOA301",
       `invalid interpolation {${path.join(".")}} (unknown name or field)`,
       ctx.file,
-      { ...ctx.at("prompt"), ...(help !== undefined ? { help } : {}) },
+      { ...ctx.header, ...(help !== undefined ? { help } : {}) },
     ),
   );
 }
@@ -586,7 +630,7 @@ function validatePromptSegments(
             "TOA303",
             `{#each ${seg.source.join(".")}} must iterate a declared array input (a "[]" type)`,
             ctx.file,
-            ctx.at("prompt"),
+            ctx.header,
           ),
         );
         continue;
@@ -606,7 +650,7 @@ function validatePromptSegments(
             "TOA306",
             `cannot destructure {#each ${seg.source.join(".")}}: its elements are not objects`,
             ctx.file,
-            ctx.at("prompt"),
+            ctx.header,
           ),
         );
       } else {
@@ -618,7 +662,7 @@ function validatePromptSegments(
                 "TOA306",
                 `{#each … as { ${field} }} — the element has no field "${field}"`,
                 ctx.file,
-                ctx.at("prompt"),
+                ctx.header,
               ),
             );
           } else {
@@ -648,7 +692,7 @@ function validatePromptSegments(
             "TOA305",
             `{#if ${seg.cond.join(".")}} must test a boolean input (a "boolean" type)`,
             ctx.file,
-            ctx.at("prompt"),
+            ctx.header,
           ),
         );
       }

@@ -35,7 +35,7 @@ describe("{#if} parsing", () => {
 
   it("reports an unclosed if", () => {
     const { errors } = parsePromptTemplate("{#if inputs.x}\nhi");
-    expect(errors.some((e) => /unclosed/.test(e))).toBe(true);
+    expect(errors.some((e) => /unclosed/.test(e.message))).toBe(true);
   });
 });
 

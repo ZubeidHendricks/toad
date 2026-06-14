@@ -1,8 +1,14 @@
 import type { EachItem, PromptSegment } from "./ast.js";
 
+/** A parse error and the character offset (into the template text) it points at. */
+export interface TemplateError {
+  message: string;
+  offset: number;
+}
+
 export interface ParseTemplateResult {
   segments: PromptSegment[];
-  errors: string[];
+  errors: TemplateError[];
 }
 
 type EachSeg = Extract<PromptSegment, { kind: "each" }>;
@@ -24,6 +30,8 @@ interface Frame {
   kind: "root" | "each" | "if";
   /** The collection currently being appended to. */
   segs: PromptSegment[];
+  /** Offset of the opening `{#each`/`{#if`, for locating an unclosed block. */
+  start?: number;
   // each
   source?: string[];
   item?: EachItem;
@@ -47,7 +55,10 @@ interface Frame {
  * newline immediately after each is consumed). Validation happens in `validate`.
  */
 export function parsePromptTemplate(text: string): ParseTemplateResult {
-  const errors: string[] = [];
+  const errors: TemplateError[] = [];
+  const err = (message: string, offset: number): void => {
+    errors.push({ message, offset });
+  };
   const root: PromptSegment[] = [];
   const stack: Frame[] = [{ kind: "root", segs: root }];
   let buf = "";
@@ -94,7 +105,7 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
         }
       }
       if (end === -1) {
-        errors.push("unterminated interpolation: missing '}'");
+        err("unterminated interpolation: missing '}'", i);
         buf += ch;
         i += 1;
         continue;
@@ -104,8 +115,9 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
       if (inner.startsWith("#each")) {
         const m = EACH.exec(inner);
         if (!m) {
-          errors.push(
+          err(
             `invalid {#each}: {${inner}} (use {#each inputs.xs as x} or {#each inputs.xs as x, i})`,
+            i,
           );
           i = end + 1;
           continue;
@@ -130,6 +142,7 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
           item,
           body,
           elseSegs: [],
+          start: i,
         };
         if (m[3] !== undefined) {
           frame.index = m[3];
@@ -142,8 +155,9 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
       if (inner.startsWith("#if")) {
         const m = IF.exec(inner);
         if (!m) {
-          errors.push(
+          err(
             `invalid {#if}: {${inner}} (use {#if inputs.flag} or {#if !inputs.flag})`,
+            i,
           );
           i = end + 1;
           continue;
@@ -159,6 +173,7 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
           segs: first.body,
           branches: [first],
           elseSegs: [],
+          start: i,
         });
         i = eatNewline(end + 1);
         continue;
@@ -168,12 +183,12 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
         const m = ELSE_IF.exec(inner);
         const frame = top();
         if (!m) {
-          errors.push(`invalid {:else if}: {${inner}}`);
+          err(`invalid {:else if}: {${inner}}`, i);
           i = end + 1;
           continue;
         }
         if (frame.kind !== "if") {
-          errors.push("unexpected {:else if}");
+          err("unexpected {:else if}", i);
           i = end + 1;
           continue;
         }
@@ -193,7 +208,7 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
         flush();
         const frame = top();
         if (frame.kind !== "if" && frame.kind !== "each") {
-          errors.push("unexpected {:else}");
+          err("unexpected {:else}", i);
           i = end + 1;
           continue;
         }
@@ -206,7 +221,7 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
         flush();
         const frame = top();
         if (frame.kind !== "each") {
-          errors.push("unexpected {/each}");
+          err("unexpected {/each}", i);
           i = end + 1;
           continue;
         }
@@ -232,7 +247,7 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
         flush();
         const frame = top();
         if (frame.kind !== "if") {
-          errors.push("unexpected {/if}");
+          err("unexpected {/if}", i);
           i = end + 1;
           continue;
         }
@@ -257,7 +272,7 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
       }
 
       if (inner === "" || !PATH.test(inner)) {
-        errors.push(`invalid interpolation: {${inner}}`);
+        err(`invalid interpolation: {${inner}}`, i);
         i = end + 1;
         continue;
       }
@@ -268,7 +283,7 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
     }
 
     if (ch === "}") {
-      errors.push("unexpected '}' (use '}}' for a literal brace)");
+      err("unexpected '}' (use '}}' for a literal brace)", i);
       buf += ch;
       i += 1;
       continue;
@@ -280,7 +295,11 @@ export function parsePromptTemplate(text: string): ParseTemplateResult {
 
   flush();
   if (stack.length > 1) {
-    errors.push("unclosed block (missing {/each} or {/if})");
+    // Point at the innermost unclosed block's opening directive.
+    err(
+      "unclosed block (missing {/each} or {/if})",
+      top().start ?? text.length,
+    );
   }
   return { segments: root, errors };
 }
