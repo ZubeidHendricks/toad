@@ -175,6 +175,22 @@ describe("row-level locations for tabular fields", () => {
     expect(d).toMatchObject({ line: 4, col: 3 });
   });
 
+  it("points a typed-tool row error at its row (TOA223)", () => {
+    const src = [
+      "agent: a",
+      "model: m",
+      "tools[2]{name,input}:",
+      '  geo,"{city:string}"',
+      "  forecast,notobject",
+      "prompt: |",
+      "  hi",
+    ].join("\n");
+    const d = analyze(src, "x.agent").diagnostics.find(
+      (x) => x.code === "TOA223",
+    );
+    expect(d).toMatchObject({ line: 5, col: 3 });
+  });
+
   it("records tabular-header key lines (so their diagnostics are located)", () => {
     // `inputs[N]{...}:` is a top-level key; its line must be tracked.
     const src = [

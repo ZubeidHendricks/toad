@@ -6,7 +6,12 @@ import type {
   ToaType,
   ToolDecl,
 } from "./ast.js";
-import { closest, errorDiagnostic, type Diagnostic } from "./diagnostics.js";
+import {
+  closest,
+  errorDiagnostic,
+  type Diagnostic,
+  type DiagnosticLoc,
+} from "./diagnostics.js";
 import { parsePromptTemplate } from "./interpolate.js";
 
 export interface ValidateResult {
@@ -123,7 +128,7 @@ export function validate(
 
   const inputs = parseFields(value, "inputs", file, diagnostics, at, rowAt);
   const outputs = parseFields(value, "outputs", file, diagnostics, at, rowAt);
-  const tools = parseTools(value, file, diagnostics, at);
+  const tools = parseTools(value, file, diagnostics, at, rowAt);
   const uses = parseUses(value, file, diagnostics, at);
   const maxTurns = parseIntKey(value, "maxTurns", file, diagnostics, at);
   const retries = parseIntKey(value, "retries", file, diagnostics, at);
@@ -368,6 +373,7 @@ function parseTools(
   file: string,
   diagnostics: Diagnostic[],
   at: Locator,
+  rowAt: RowLocator,
 ): ToolDecl[] {
   const arr = obj.tools;
   if (arr === undefined) {
@@ -386,14 +392,14 @@ function parseTools(
   }
   const tools: ToolDecl[] = [];
   const seen = new Set<string>();
-  const push = (decl: ToolDecl): void => {
+  const push = (decl: ToolDecl, loc: DiagnosticLoc): void => {
     if (seen.has(decl.name)) {
       diagnostics.push(
         errorDiagnostic(
           "TOA224",
           `duplicate tool name "${decl.name}"`,
           file,
-          at("tools"),
+          loc,
         ),
       );
       return;
@@ -401,23 +407,25 @@ function parseTools(
     seen.add(decl.name);
     tools.push(decl);
   };
-  for (const t of arr) {
-    // Bare-name form (`tools[N]: a,b`): just the tool name, body in `.tools.ts`.
+  arr.forEach((t, index) => {
+    // Bare-name form (`tools[N]: a,b`): names share the header line.
     if (typeof t === "string") {
       if (!IDENT.test(t)) {
-        diagnostics.push(badToolName(t, file, at));
-        continue;
+        diagnostics.push(badToolName(t, file, at("tools")));
+        return;
       }
-      push({ name: t });
-      continue;
+      push({ name: t }, at("tools"));
+      return;
     }
-    // Typed tabular form (`tools[N]{name,input}:`): the compiler owns the
-    // input schema; the tools file supplies only the typed `run` body.
+    // Typed tabular form (`tools[N]{name,input}:`): each row is on its own line,
+    // so locate errors at the row. The compiler owns the input schema; the tools
+    // file supplies only the typed `run` body.
+    const loc = rowAt("tools", index);
     if (isObject(t) && typeof t.name === "string") {
       const name = t.name;
       if (!IDENT.test(name)) {
-        diagnostics.push(badToolName(name, file, at));
-        continue;
+        diagnostics.push(badToolName(name, file, loc));
+        return;
       }
       if (typeof t.input !== "string") {
         diagnostics.push(
@@ -425,10 +433,10 @@ function parseTools(
             "TOA222",
             `typed tool "${name}" needs a string input type`,
             file,
-            at("tools"),
+            loc,
           ),
         );
-        continue;
+        return;
       }
       const input = parseType(t.input);
       if (input === undefined || input.base !== "object" || input.array) {
@@ -437,36 +445,40 @@ function parseTools(
             "TOA223",
             `tool "${name}" input must be an object type like "{query:string}"`,
             file,
-            at("tools"),
+            loc,
           ),
         );
-        continue;
+        return;
       }
       const decl: ToolDecl = { name, input };
       if (typeof t.description === "string") {
         decl.description = t.description;
       }
-      push(decl);
-      continue;
+      push(decl, loc);
+      return;
     }
     diagnostics.push(
       errorDiagnostic(
         "TOA221",
         `each tool must be a name or a {name,input} row, got ${JSON.stringify(t)}`,
         file,
-        at("tools"),
+        loc,
       ),
     );
-  }
+  });
   return tools;
 }
 
-function badToolName(value: unknown, file: string, at: Locator): Diagnostic {
+function badToolName(
+  value: unknown,
+  file: string,
+  loc: DiagnosticLoc,
+): Diagnostic {
   return errorDiagnostic(
     "TOA221",
     `tool name must be an identifier, got ${JSON.stringify(value)}`,
     file,
-    at("tools"),
+    loc,
   );
 }
 
