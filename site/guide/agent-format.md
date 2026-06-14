@@ -16,7 +16,7 @@ Real logic (what a tool actually does) lives in plain TypeScript, in a co-locate
 | `model`                 | yes | string                          | a Claude model id, e.g. `claude-opus-4-7`            |
 | `description`           | no  | string                          | one line on what it does                             |
 | `inputs`                | no  | `inputs[N]{name,type}:` + N rows | typed call parameters                                |
-| `tools`                 | no  | `tools[N]: a,b`                 | tool names, implemented in `<agent>.tools.ts`        |
+| `tools`                 | no  | `tools[N]: a,b` or `tools[N]{name,input}:` | tools, implemented in `<agent>.tools.ts` (see [Tools](#tools)) |
 | `prompt`                | yes | `prompt: \|` + block            | the instruction prompt                               |
 | `outputs`               | no  | `outputs[N]{name,type}:` + N rows | typed structured result                              |
 | `system`                | no  | `system: \|` + block            | system prompt (defaults to the description)          |
@@ -54,6 +54,30 @@ inputs[3]{name,type}:
   detailed,boolean
   audience,string
 ```
+
+## Tools
+
+Tools take one of two forms. **Bare names** list the tools; each is a full `defineTool` (description, schema, body) in the co-located `<agent>.tools.ts`:
+
+```agent
+tools[2]: web_search,fetch_page
+```
+
+**Typed tools** declare each tool's input type right in the `.agent` file, so the file owns the schema. `toac` then generates the Zod schema and a typed `defineTool`, and `<agent>.tools.ts` supplies only the `run` body — type-checked against the declared input:
+
+```agent
+tools[2]{name,input}:
+  web_search,"{query:string}"
+  fetch_page,"{url:string}"
+```
+
+```ts
+// researcher.tools.ts — just the bodies
+import type { WebSearchInput } from "./researcher";
+export const web_search = (i: WebSearchInput) => search(i.query);
+```
+
+Add a third column for a model-facing description: `tools[N]{name,input,description}:`. A tool's `input` must be an object type.
 
 ## A complete example
 

@@ -10,6 +10,7 @@ npm i -g toad-compiler
 
 ```bash
 toac <build|check> <paths...> [--outDir <dir>]
+toac fmt [--check] <paths...>
 toac init <name>
 ```
 
@@ -49,19 +50,38 @@ Validate without emitting — same diagnostics, no files written. Useful in CI:
 toac check agents/
 ```
 
+### `toac fmt`
+
+The canonical formatter — TOAD's `gofmt`/`rustfmt`. It reorders top-level keys to the spec's schema order and normalizes indentation, key spacing, and blank lines, while preserving `prompt`/`system` block content exactly. It is idempotent and re-parses its own output, refusing to write if the result would mean anything different — so `toac fmt` can never change what an agent does. Invalid files are reported (like `check`) and never rewritten.
+
+```bash
+toac fmt researcher.agent
+# formatted researcher.agent
+
+toac fmt --check agents/   # write nothing; list files that need formatting, exit 1 if any
+```
+
+`--check` makes it a CI gate (no writes, non-zero exit when something isn't formatted).
+
 ## Flags
 
 | Flag             | Meaning                                            |
 | ---------------- | -------------------------------------------------- |
-| `--outDir <dir>` | Write compiled `.ts` files into `<dir>` instead of next to the source |
+| `--outDir <dir>` | Write compiled `.ts` files into `<dir>` instead of next to the source (`build`) |
+| `--check`        | `fmt` only: write nothing, list files needing formatting, exit non-zero if any |
 | `--version`, `-v` | Print the compiler version                         |
 
 ## Diagnostics & exit codes
 
-Errors are located, structured diagnostics:
+Errors are located, structured diagnostics, rendered as code frames with a caret under the offending span and a `did you mean?` hint where one applies:
 
 ```
-researcher.agent:5:3 error TOAD012: prompt references undeclared input "topics" (did you mean "topic"?)
+error[TOA202]: unknown key "promt"
+  --> researcher.agent:4:1
+   |
+ 4 | promt: |
+   | ^^^^^ did you mean `prompt`?
+   |
 ```
 
 `toac` exits `0` when everything compiled, `1` if any file had errors (or no `.agent` files were found). Files with errors don't emit output; the rest still do.
@@ -71,10 +91,14 @@ researcher.agent:5:3 error TOAD012: prompt references undeclared input "topics" 
 The same pipeline is exported from `toad-compiler` — it's what powers the in-browser [playground](/playground):
 
 ```ts
-import { compile, formatDiagnostic } from "toad-compiler";
+import { compile, renderDiagnostic, formatAgent } from "toad-compiler";
 
 const { code, diagnostics } = compile(source, "researcher.agent");
 if (code === undefined) {
-  for (const d of diagnostics) console.error(formatDiagnostic(d));
+  // renderDiagnostic draws the code frame; pass the source to get the caret.
+  for (const d of diagnostics) console.error(renderDiagnostic(d, source));
 }
+
+// Canonical formatting (what `toac fmt` runs):
+const { code: formatted, changed } = formatAgent(source, "researcher.agent");
 ```
