@@ -46,6 +46,12 @@ toac build greeter.agent
 # compiled greeter.agent -> greeter.ts
 ```
 
+Keep it tidy with the canonical formatter (and gate it in CI with `--check`):
+
+```bash
+toac fmt greeter.agent
+```
+
 The emitted `greeter.ts` exports a typed, runnable agent. Run it from any TypeScript file (with `ANTHROPIC_API_KEY` set in your environment):
 
 ```ts
@@ -83,6 +89,20 @@ export const web_search = defineTool({
   input: z.object({ query: z.string() }),
   run: async ({ query }) => `results for ${query}`,
 });
+```
+
+Or let the `.agent` file own each tool's input schema with the typed form — then the tools file is just the bodies, type-checked against the declared input:
+
+```agent
+tools[2]{name,input}:
+  web_search,"{query:string}"
+  fetch_page,"{url:string}"
+```
+
+```ts
+// researcher.tools.ts
+import type { WebSearchInput } from "./researcher";
+export const web_search = (i: WebSearchInput) => search(i.query);
 ```
 
 ## What's next
