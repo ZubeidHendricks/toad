@@ -66,7 +66,17 @@ type-checked template language:
 
 Types are `string` / `number` / `boolean`, a quoted object like
 `"{a:string;b:number}"`, and any of those with `[]`. Every reference is validated
-against the agent's typed inputs, with located `file:line:col` diagnostics.
+against the agent's typed inputs, with rustc/Elm-style diagnostics — a code frame
+under the offending span plus `did you mean?` suggestions:
+
+```text
+error[TOA202]: unknown key "promt"
+  --> researcher.agent:4:1
+   |
+ 4 | promt: |
+   | ^^^^^ did you mean `prompt`?
+   |
+```
 
 Tools can be **bare names** (`tools[2]: web_search,fetch_page`) — the body in
 `<agent>.tools.ts` owns its schema — or **typed**, where the `.agent` file owns
@@ -174,5 +184,5 @@ copy-paste prompt that turns any LLM into a TOAD author.
 
 ## Status
 
-167 passing tests, green gate (typecheck · test · lint · build). Design docs live
+178 passing tests, green gate (typecheck · test · lint · build). Design docs live
 in [`_bmad-output/`](./_bmad-output/).

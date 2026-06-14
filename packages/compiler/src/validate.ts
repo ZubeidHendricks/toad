@@ -6,7 +6,7 @@ import type {
   ToaType,
   ToolDecl,
 } from "./ast.js";
-import { errorDiagnostic, type Diagnostic } from "./diagnostics.js";
+import { closest, errorDiagnostic, type Diagnostic } from "./diagnostics.js";
 import { parsePromptTemplate } from "./interpolate.js";
 
 export interface ValidateResult {
@@ -54,8 +54,15 @@ export function validate(
 
   for (const key of Object.keys(value)) {
     if (!ALLOWED_KEYS.has(key)) {
+      const hint = closest(key, ALLOWED_KEYS);
+      // Keys sit at column 1 in TOON; underline the whole key.
       diagnostics.push(
-        errorDiagnostic("TOA202", `unknown key "${key}"`, file, at(key)),
+        errorDiagnostic("TOA202", `unknown key "${key}"`, file, {
+          ...at(key),
+          col: 1,
+          length: key.length,
+          ...(hint !== undefined ? { help: `did you mean \`${hint}\`?` } : {}),
+        }),
       );
     }
   }
@@ -485,12 +492,18 @@ function resolveFieldPath(type: ToaType, rest: string[]): ToaType | null {
 }
 
 function badInterp(path: string[], ctx: PromptScopeCtx): void {
+  // Suggest the closest declared input when a `{inputs.X}` name looks like a typo.
+  let help: string | undefined;
+  if (path[0] === "inputs" && path.length >= 2) {
+    const hint = closest(path[1]!, ctx.inputTypes.keys());
+    if (hint !== undefined) help = `did you mean \`inputs.${hint}\`?`;
+  }
   ctx.diagnostics.push(
     errorDiagnostic(
       "TOA301",
       `invalid interpolation {${path.join(".")}} (unknown name or field)`,
       ctx.file,
-      ctx.at("prompt"),
+      { ...ctx.at("prompt"), ...(help !== undefined ? { help } : {}) },
     ),
   );
 }

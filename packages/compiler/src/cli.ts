@@ -1,6 +1,6 @@
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
-import { compile, COMPILER_VERSION, formatDiagnostic } from "./index.js";
+import { compile, COMPILER_VERSION, renderDiagnostic } from "./index.js";
 
 export interface Logger {
   log: (line: string) => void;
@@ -91,7 +91,8 @@ export async function run(
     const { code, diagnostics } = compile(source, file);
 
     for (const d of diagnostics) {
-      (d.severity === "error" ? logger.error : logger.log)(formatDiagnostic(d));
+      const rendered = renderDiagnostic(d, source);
+      (d.severity === "error" ? logger.error : logger.log)(rendered);
     }
     if (code === undefined) {
       hadError = true;
