@@ -23,6 +23,16 @@ describe("lifecycle knobs (maxTurns / retries)", () => {
     const code = generate(ast!);
     expect(code).not.toContain("maxTurns:");
     expect(code).not.toContain("retries:");
+    expect(code).not.toContain("maxContextTokens:");
+  });
+
+  it("emits maxContextTokens into createAgent", () => {
+    const { ast, diagnostics } = analyze(
+      agent(["maxContextTokens: 8000"]),
+      "a.agent",
+    );
+    expect(diagnostics).toEqual([]);
+    expect(generate(ast!)).toContain("maxContextTokens: 8000,");
   });
 
   it("rejects a negative retries (TOA206)", () => {

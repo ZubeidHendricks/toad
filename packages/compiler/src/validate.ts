@@ -29,6 +29,7 @@ const ALLOWED_KEYS = new Set([
   "outputs",
   "system",
   "maxTurns",
+  "maxContextTokens",
   "retries",
   "temperature",
   "uses",
@@ -131,6 +132,13 @@ export function validate(
   const tools = parseTools(value, file, diagnostics, at, rowAt);
   const uses = parseUses(value, file, diagnostics, at);
   const maxTurns = parseIntKey(value, "maxTurns", file, diagnostics, at);
+  const maxContextTokens = parseIntKey(
+    value,
+    "maxContextTokens",
+    file,
+    diagnostics,
+    at,
+  );
   const retries = parseIntKey(value, "retries", file, diagnostics, at);
   const temperature = parseTemperature(value, file, diagnostics, at);
   const prompt =
@@ -188,6 +196,9 @@ export function validate(
   }
   if (maxTurns !== undefined) {
     ast.maxTurns = maxTurns;
+  }
+  if (maxContextTokens !== undefined) {
+    ast.maxContextTokens = maxContextTokens;
   }
   if (retries !== undefined) {
     ast.retries = retries;

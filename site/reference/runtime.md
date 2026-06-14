@@ -211,6 +211,19 @@ const agent = createAgent({
 
 Estimates are heuristic (relative, not exact billing). For the static counterpart — the fixed prefix before you ever run — use [`toac cost`](/reference/cli#toac-cost).
 
+### Context budgeting: `maxContextTokens`
+
+Conversation history is re-sent every turn, so it's the cost that grows without bound in a long tool loop. Set `maxContextTokens` (in the config, or as a `.agent` key) to cap it: before each call, if the estimated context exceeds the budget, the runtime elides the **oldest** tool results — replacing their content with a short placeholder, oldest first, preserving the tool_use/result pairing the API requires — until back under budget. The current turn's fresh results are never elided.
+
+```ts
+const agent = createAgent({
+  // ...
+  maxContextTokens: 8000, // cap the per-turn context; omit to disable
+});
+```
+
+It's a soft ceiling based on the same heuristic estimate as `onContext` — watch `onContext`'s `messages` flatten out across turns once it's set. Omitted = no compaction.
+
 ## Token-efficient tool results {#toon-serialization}
 
 Tool results that are objects or arrays go back into the conversation as text — and JSON is a verbose way to do that. `toolResultFormat` controls the encoding:

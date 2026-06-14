@@ -101,6 +101,14 @@ export interface AgentConfig<I, O> {
   system?: (inputs: I) => string;
   maxTurns?: number;
   maxTokens?: number;
+  /**
+   * Soft ceiling (estimated tokens) on the conversation context sent each turn.
+   * When exceeded, the oldest tool results are elided (their content replaced
+   * with a short placeholder, oldest first) until back under budget — the
+   * current turn's fresh results are never elided. Caps the unbounded history
+   * growth that dominates long tool loops. Omitted = no compaction.
+   */
+  maxContextTokens?: number;
   /** Sampling temperature (0–1); omitted = the API default. */
   temperature?: number;
   /** Retry the model call up to this many times on error. */
@@ -321,6 +329,14 @@ export function createAgent<I, O = string>(
         if (config.temperature !== undefined) {
           req.temperature = config.temperature;
         }
+        if (config.maxContextTokens !== undefined) {
+          compactHistory(
+            messages,
+            systemFor(inputs),
+            tools,
+            config.maxContextTokens,
+          );
+        }
         reportContext(hooks, systemFor(inputs), tools, messages);
         const res = await callModel(req, signal, hooks);
         trackUsage(res, total, hooks);
@@ -526,6 +542,14 @@ export function createAgent<I, O = string>(
           };
           let sawUsage = false;
           let message: LlmResponse | undefined;
+          if (config.maxContextTokens !== undefined) {
+            compactHistory(
+              messages,
+              systemFor(inputs),
+              tools,
+              config.maxContextTokens,
+            );
+          }
           reportContext(hooks, systemFor(inputs), tools, messages);
           for await (const chunk of client.stream(
             req,
@@ -766,6 +790,46 @@ async function runToolUses<I, O>(
       };
     }),
   );
+}
+
+const ELIDED_TOOL_RESULT =
+  "[earlier tool result elided to stay within the context budget]";
+
+/**
+ * Cap conversation growth in place: while the estimated context exceeds the
+ * budget, elide the oldest tool-result blocks (replace their content with a
+ * short placeholder, which keeps the tool_use/result pairing the API requires).
+ * The last message is never touched, so the current turn's fresh results
+ * survive. History is the cost that grows every turn; this bounds it.
+ */
+function compactHistory(
+  messages: LlmMessage[],
+  systemText: string,
+  tools: LlmTool[],
+  maxContextTokens: number,
+): void {
+  const fixed =
+    estimateTokens(systemText) +
+    (tools.length > 0 ? estimateTokens(JSON.stringify(tools)) : 0);
+  const over = (): boolean =>
+    fixed + estimateTokens(JSON.stringify(messages)) > maxContextTokens;
+  if (!over()) return;
+  for (let m = 0; m < messages.length - 1 && over(); m++) {
+    const content = messages[m]!.content;
+    if (!Array.isArray(content)) continue;
+    for (const block of content as Array<{
+      type?: string;
+      content?: unknown;
+    }>) {
+      if (!over()) break;
+      if (
+        block.type === "tool_result" &&
+        block.content !== ELIDED_TOOL_RESULT
+      ) {
+        block.content = ELIDED_TOOL_RESULT;
+      }
+    }
+  }
 }
 
 /** Estimate the request's component sizes and report them via `onContext`. */

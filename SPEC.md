@@ -27,20 +27,21 @@ Conforming implementations MUST NOT implement a bespoke structural parser for th
 
 The decoded document MUST be an object. Its keys are:
 
-| Key           | Required | Value                                  |
-| ------------- | -------- | -------------------------------------- |
-| `agent`       | yes      | identifier (§3.1)                      |
-| `model`       | yes      | non-empty string (a model id)          |
-| `description` | no       | string                                 |
-| `inputs`      | no       | tabular array of `{name, type}` (§4.4) |
-| `tools`       | no       | list of identifiers (§4.5)             |
-| `prompt`      | yes      | string (§4.6)                          |
-| `outputs`     | no       | tabular array of `{name, type}` (§4.7) |
-| `system`      | no       | string (§4.8)                          |
-| `uses`        | no       | list of identifiers (§4.9)             |
-| `maxTurns`    | no       | positive integer                       |
-| `retries`     | no       | non-negative integer                   |
-| `temperature` | no       | number in [0, 1] (§4.10)               |
+| Key                | Required | Value                                  |
+| ------------------ | -------- | -------------------------------------- |
+| `agent`            | yes      | identifier (§3.1)                      |
+| `model`            | yes      | non-empty string (a model id)          |
+| `description`      | no       | string                                 |
+| `inputs`           | no       | tabular array of `{name, type}` (§4.4) |
+| `tools`            | no       | list of identifiers (§4.5)             |
+| `prompt`           | yes      | string (§4.6)                          |
+| `outputs`          | no       | tabular array of `{name, type}` (§4.7) |
+| `system`           | no       | string (§4.8)                          |
+| `uses`             | no       | list of identifiers (§4.9)             |
+| `maxTurns`         | no       | positive integer                       |
+| `maxContextTokens` | no       | non-negative integer (§4.11)           |
+| `retries`          | no       | non-negative integer                   |
+| `temperature`      | no       | number in [0, 1] (§4.10)               |
 
 Unknown keys MUST produce an error diagnostic.
 
@@ -96,6 +97,10 @@ A list of sub-agent identifiers. Compilers MUST wire each named agent in as a to
 ### 4.10 `temperature`
 
 Sampling temperature, a number in `[0, 1]`. When absent, the model provider's default applies. Values outside the range MUST produce an error diagnostic.
+
+### 4.11 `maxContextTokens`
+
+A soft per-turn budget (estimated tokens) on the conversation context. When present, a conforming runtime SHOULD bound history growth — for example, by eliding the oldest tool results once the estimated context exceeds the budget — without breaking tool-call/result pairing. The value is advisory and the estimation method is implementation-defined; omitting it disables compaction.
 
 ## 5. Types
 

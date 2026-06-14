@@ -102,6 +102,9 @@ export function generate(ast: AgentAst): string {
   if (ast.maxTurns !== undefined) {
     lines.push(`  maxTurns: ${ast.maxTurns},`);
   }
+  if (ast.maxContextTokens !== undefined) {
+    lines.push(`  maxContextTokens: ${ast.maxContextTokens},`);
+  }
   if (ast.retries !== undefined) {
     lines.push(`  retries: ${ast.retries},`);
   }

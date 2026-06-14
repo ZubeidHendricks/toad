@@ -1165,6 +1165,97 @@ describe("per-call hooks (RunOptions.hooks)", () => {
   });
 });
 
+describe("maxContextTokens compaction", () => {
+  // Three big tool results, then a final answer. Returns the per-call context
+  // estimates and the final messages.
+  const runScenario = async (maxContextTokens?: number) => {
+    const big = "RESULT ".repeat(200);
+    const tool = defineTool({
+      description: "fetch",
+      input: z.object({ n: z.number() }),
+      run: () => big,
+    });
+    const client = scriptedClient([
+      {
+        stop_reason: "tool_use",
+        content: [
+          { type: "tool_use", id: "a", name: "fetch", input: { n: 1 } },
+        ],
+      },
+      {
+        stop_reason: "tool_use",
+        content: [
+          { type: "tool_use", id: "b", name: "fetch", input: { n: 2 } },
+        ],
+      },
+      {
+        stop_reason: "tool_use",
+        content: [
+          { type: "tool_use", id: "c", name: "fetch", input: { n: 3 } },
+        ],
+      },
+      { stop_reason: "end_turn", content: [{ type: "text", text: "done" }] },
+    ]);
+    const ctx: number[] = [];
+    const config: Parameters<typeof createAgent>[0] = {
+      name: "t",
+      model: "m",
+      tools: { fetch: tool },
+      prompt: () => "go",
+      client,
+      hooks: { onContext: (b) => ctx.push(b.estimatedTotal) },
+    };
+    if (maxContextTokens !== undefined)
+      config.maxContextTokens = maxContextTokens;
+    const session = createAgent(config).session({});
+    await session.send();
+    return { ctx, messages: session.messages };
+  };
+
+  it("bounds context growth vs. no budget, eliding old results", async () => {
+    const capped = await runScenario(250);
+    const uncapped = await runScenario();
+
+    // Old results were elided under the budget.
+    const elided = capped.messages
+      .filter((m) => Array.isArray(m.content))
+      .flatMap((m) => m.content as Array<{ type?: string; content?: unknown }>)
+      .filter((b) => b.type === "tool_result")
+      .filter((b) => String(b.content).includes("elided")).length;
+    expect(elided).toBeGreaterThan(0);
+
+    // The budgeted run's peak context is well below the unbounded one.
+    expect(Math.max(...capped.ctx)).toBeLessThan(Math.max(...uncapped.ctx));
+  });
+
+  it("does not compact when under budget (or unset)", async () => {
+    const tool = defineTool({
+      description: "fetch",
+      input: z.object({}),
+      run: () => "small",
+    });
+    const client = scriptedClient([
+      {
+        stop_reason: "tool_use",
+        content: [{ type: "tool_use", id: "a", name: "fetch", input: {} }],
+      },
+      { stop_reason: "end_turn", content: [{ type: "text", text: "done" }] },
+    ]);
+    const session = createAgent({
+      name: "t",
+      model: "m",
+      tools: { fetch: tool },
+      prompt: () => "go",
+      maxContextTokens: 100000,
+      client,
+    }).session({});
+    await session.send();
+    const text = JSON.stringify(session.messages);
+    expect(text).not.toContain("elided");
+    expect(text).toContain("small");
+  });
+});
+
 describe("onContext token attribution", () => {
   it("reports a per-call breakdown; history grows across turns", async () => {
     const breakdowns: import("./agent.js").ContextBreakdown[] = [];

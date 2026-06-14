@@ -76,6 +76,8 @@ export interface AgentAst {
   system?: PromptSegment[];
   /** Max tool-use turns before giving up. */
   maxTurns?: number;
+  /** Soft per-turn context-token budget; older tool results are elided over it. */
+  maxContextTokens?: number;
   /** Retries for the model call on error. */
   retries?: number;
   /** Sampling temperature (0–1); omitted = the API default. */
