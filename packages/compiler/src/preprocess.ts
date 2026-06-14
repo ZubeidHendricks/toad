@@ -9,7 +9,10 @@ export interface PreprocessResult {
 }
 
 const BLOCK_HEADER = /^([A-Za-z_][A-Za-z0-9_.]*|"(?:[^"\\]|\\.)*"): *\| *$/;
-const TOP_LEVEL_KEY = /^([A-Za-z_][A-Za-z0-9_.]*|"(?:[^"\\]|\\.)*"):/;
+// A top-level key is followed by `:` (scalars, block scalars) or `[` (tabular
+// headers like `inputs[2]{name,type}:` and lists like `tools[2]:`); capture both
+// so every key's line is recorded for diagnostics.
+const TOP_LEVEL_KEY = /^([A-Za-z_][A-Za-z0-9_.]*|"(?:[^"\\]|\\.)*")(?::|\[)/;
 
 /**
  * Lower the Toa superset to valid TOON. The only MVP extension is the block

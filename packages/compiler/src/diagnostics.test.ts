@@ -141,3 +141,53 @@ describe("suggestions wired into validation", () => {
     expect(d?.help).toBe("did you mean `inputs.topic`?");
   });
 });
+
+describe("row-level locations for tabular fields", () => {
+  it("points a bad type at its row, not the header (TOA212)", () => {
+    const src = [
+      "agent: a",
+      "model: m",
+      "inputs[2]{name,type}:",
+      "  topic,string",
+      "  count,wholenumber",
+      "prompt: |",
+      "  hi",
+    ].join("\n");
+    const d = analyze(src, "x.agent").diagnostics.find(
+      (x) => x.code === "TOA212",
+    );
+    expect(d).toMatchObject({ line: 5, col: 3 });
+    expect(d?.length).toBe("count,wholenumber".length);
+  });
+
+  it("locates a bad field name at its row (TOA211)", () => {
+    const src = [
+      "agent: a",
+      "model: m",
+      "inputs[1]{name,type}:",
+      "  2bad,string",
+      "prompt: |",
+      "  hi",
+    ].join("\n");
+    const d = analyze(src, "x.agent").diagnostics.find(
+      (x) => x.code === "TOA211",
+    );
+    expect(d).toMatchObject({ line: 4, col: 3 });
+  });
+
+  it("records tabular-header key lines (so their diagnostics are located)", () => {
+    // `inputs[N]{...}:` is a top-level key; its line must be tracked.
+    const src = [
+      "agent: a",
+      "model: m",
+      "outputs[1]{name,type}:",
+      "  result,notatype",
+      "prompt: |",
+      "  hi",
+    ].join("\n");
+    const d = analyze(src, "x.agent").diagnostics.find(
+      (x) => x.code === "TOA212",
+    );
+    expect(d?.line).toBe(4);
+  });
+});

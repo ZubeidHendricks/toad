@@ -31,6 +31,11 @@ const ALLOWED_KEYS = new Set([
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 type Locator = (key: string) => { line?: number };
+/** Locate a specific row of a tabular key (`inputs`/`outputs`) for a caret. */
+type RowLocator = (
+  key: string,
+  index: number,
+) => { line?: number; col?: number; length?: number };
 
 /**
  * Validate a decoded `.agent` object and lift it into a typed `AgentAst`. All
@@ -41,9 +46,28 @@ export function validate(
   value: JsonValue,
   file: string,
   keyLines: Map<string, number>,
+  source?: string,
 ): ValidateResult {
   const diagnostics: Diagnostic[] = [];
   const at: Locator = (key) => ({ line: keyLines.get(key) });
+  // Tabular rows follow the header line in order, so row i is at headerLine+1+i.
+  // Resolve it to a precise caret (column + width) when the source is available.
+  const srcLines = source?.split(/\r?\n/);
+  const rowAt: RowLocator = (key, index) => {
+    const headerLine = keyLines.get(key);
+    if (headerLine === undefined || srcLines === undefined) {
+      return { line: headerLine };
+    }
+    const lineNo = headerLine + 1 + index;
+    const text = srcLines[lineNo - 1] ?? "";
+    const trimmed = text.trim();
+    if (trimmed === "") return { line: headerLine };
+    return {
+      line: lineNo,
+      col: text.length - text.trimStart().length + 1,
+      length: trimmed.length,
+    };
+  };
 
   if (!isObject(value)) {
     diagnostics.push(
@@ -97,8 +121,8 @@ export function validate(
     }
   }
 
-  const inputs = parseFields(value, "inputs", file, diagnostics, at);
-  const outputs = parseFields(value, "outputs", file, diagnostics, at);
+  const inputs = parseFields(value, "inputs", file, diagnostics, at, rowAt);
+  const outputs = parseFields(value, "outputs", file, diagnostics, at, rowAt);
   const tools = parseTools(value, file, diagnostics, at);
   const uses = parseUses(value, file, diagnostics, at);
   const maxTurns = parseIntKey(value, "maxTurns", file, diagnostics, at);
@@ -272,6 +296,7 @@ function parseFields(
   file: string,
   diagnostics: Diagnostic[],
   at: Locator,
+  rowAt: RowLocator,
 ): FieldDecl[] {
   const arr = obj[key];
   if (arr === undefined) {
@@ -289,7 +314,7 @@ function parseFields(
     return [];
   }
   const fields: FieldDecl[] = [];
-  for (const item of arr) {
+  arr.forEach((item, index) => {
     if (
       !isObject(item) ||
       typeof item.name !== "string" ||
@@ -300,10 +325,10 @@ function parseFields(
           "TOA210",
           `each "${key}" row needs a string name and type`,
           file,
-          at(key),
+          rowAt(key, index),
         ),
       );
-      continue;
+      return;
     }
     const rawName: string = item.name;
     const rawType: string = item.type;
@@ -316,10 +341,10 @@ function parseFields(
           "TOA211",
           `"${key}" name "${name}" must be an identifier`,
           file,
-          at(key),
+          rowAt(key, index),
         ),
       );
-      continue;
+      return;
     }
     const type = parseType(rawType);
     if (type === undefined) {
@@ -328,13 +353,13 @@ function parseFields(
           "TOA212",
           `"${key}" has unsupported type "${rawType}" (use string | number | boolean, optional "[]")`,
           file,
-          at(key),
+          rowAt(key, index),
         ),
       );
-      continue;
+      return;
     }
     fields.push(optional ? { name, type, optional } : { name, type });
-  }
+  });
   return fields;
 }
 

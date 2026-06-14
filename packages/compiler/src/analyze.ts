@@ -25,5 +25,5 @@ export function analyze(source: string, file: string): AnalyzeResult {
     return { diagnostics: decoded.diagnostics };
   }
 
-  return validate(decoded.value, file, pre.keyLines);
+  return validate(decoded.value, file, pre.keyLines, source);
 }
