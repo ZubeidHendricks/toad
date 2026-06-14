@@ -1085,13 +1085,52 @@ function resolveDecodeOptions(options) {
 // packages/compiler/dist/diagnostics.js
 function errorDiagnostic(code, message, file, loc) {
   const diagnostic = { severity: "error", code, message, file };
-  if (loc?.line !== void 0) {
+  if (loc?.line !== void 0)
     diagnostic.line = loc.line;
-  }
-  if (loc?.col !== void 0) {
+  if (loc?.col !== void 0)
     diagnostic.col = loc.col;
-  }
+  if (loc?.length !== void 0)
+    diagnostic.length = loc.length;
+  if (loc?.help !== void 0)
+    diagnostic.help = loc.help;
   return diagnostic;
+}
+function closest(name, candidates) {
+  let best;
+  let bestDistance = Infinity;
+  for (const candidate of candidates) {
+    const d = editDistance(name, candidate);
+    if (d < bestDistance) {
+      bestDistance = d;
+      best = candidate;
+    }
+  }
+  const threshold = Math.max(1, Math.floor(name.length / 3));
+  return best !== void 0 && bestDistance <= threshold ? best : void 0;
+}
+function editDistance(a, b) {
+  const m = a.length;
+  const n = b.length;
+  if (m === 0)
+    return n;
+  if (n === 0)
+    return m;
+  const d = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++)
+    d[i][0] = i;
+  for (let j = 0; j <= n; j++)
+    d[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      let best = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        best = Math.min(best, d[i - 2][j - 2] + 1);
+      }
+      d[i][j] = best;
+    }
+  }
+  return d[m][n];
 }
 
 // packages/compiler/dist/toon.js
@@ -1358,7 +1397,13 @@ function validate(value, file, keyLines) {
   }
   for (const key of Object.keys(value)) {
     if (!ALLOWED_KEYS.has(key)) {
-      diagnostics.push(errorDiagnostic("TOA202", `unknown key "${key}"`, file, at(key)));
+      const hint = closest(key, ALLOWED_KEYS);
+      diagnostics.push(errorDiagnostic("TOA202", `unknown key "${key}"`, file, {
+        ...at(key),
+        col: 1,
+        length: key.length,
+        ...hint !== void 0 ? { help: `did you mean \`${hint}\`?` } : {}
+      }));
     }
   }
   const name = requireString(value, "agent", file, diagnostics, at);
@@ -1511,18 +1556,56 @@ function parseTools(obj, file, diagnostics, at) {
     return [];
   }
   if (!Array.isArray(arr)) {
-    diagnostics.push(errorDiagnostic("TOA220", `"tools" must be an array of names`, file, at("tools")));
+    diagnostics.push(errorDiagnostic("TOA220", `"tools" must be a list of names or {name,input} rows`, file, at("tools")));
     return [];
   }
-  const names = [];
+  const tools = [];
+  const seen = /* @__PURE__ */ new Set();
+  const push = (decl) => {
+    if (seen.has(decl.name)) {
+      diagnostics.push(errorDiagnostic("TOA224", `duplicate tool name "${decl.name}"`, file, at("tools")));
+      return;
+    }
+    seen.add(decl.name);
+    tools.push(decl);
+  };
   for (const t of arr) {
-    if (typeof t !== "string" || !IDENT.test(t)) {
-      diagnostics.push(errorDiagnostic("TOA221", `tool name must be an identifier, got ${JSON.stringify(t)}`, file, at("tools")));
+    if (typeof t === "string") {
+      if (!IDENT.test(t)) {
+        diagnostics.push(badToolName(t, file, at));
+        continue;
+      }
+      push({ name: t });
       continue;
     }
-    names.push(t);
+    if (isObject(t) && typeof t.name === "string") {
+      const name = t.name;
+      if (!IDENT.test(name)) {
+        diagnostics.push(badToolName(name, file, at));
+        continue;
+      }
+      if (typeof t.input !== "string") {
+        diagnostics.push(errorDiagnostic("TOA222", `typed tool "${name}" needs a string input type`, file, at("tools")));
+        continue;
+      }
+      const input = parseType(t.input);
+      if (input === void 0 || input.base !== "object" || input.array) {
+        diagnostics.push(errorDiagnostic("TOA223", `tool "${name}" input must be an object type like "{query:string}"`, file, at("tools")));
+        continue;
+      }
+      const decl = { name, input };
+      if (typeof t.description === "string") {
+        decl.description = t.description;
+      }
+      push(decl);
+      continue;
+    }
+    diagnostics.push(errorDiagnostic("TOA221", `each tool must be a name or a {name,input} row, got ${JSON.stringify(t)}`, file, at("tools")));
   }
-  return names;
+  return tools;
+}
+function badToolName(value, file, at) {
+  return errorDiagnostic("TOA221", `tool name must be an identifier, got ${JSON.stringify(value)}`, file, at("tools"));
 }
 function parsePrompt(text, inputs, file, diagnostics, at) {
   const ctx = {
@@ -1554,7 +1637,13 @@ function resolveFieldPath(type, rest) {
   return cur;
 }
 function badInterp(path, ctx) {
-  ctx.diagnostics.push(errorDiagnostic("TOA301", `invalid interpolation {${path.join(".")}} (unknown name or field)`, ctx.file, ctx.at("prompt")));
+  let help;
+  if (path[0] === "inputs" && path.length >= 2) {
+    const hint = closest(path[1], ctx.inputTypes.keys());
+    if (hint !== void 0)
+      help = `did you mean \`inputs.${hint}\`?`;
+  }
+  ctx.diagnostics.push(errorDiagnostic("TOA301", `invalid interpolation {${path.join(".")}} (unknown name or field)`, ctx.file, { ...ctx.at("prompt"), ...help !== void 0 ? { help } : {} }));
 }
 function validatePromptSegments(segments, vars, ctx) {
   for (const seg of segments) {
@@ -1700,6 +1789,7 @@ function generate(ast) {
   const hasInputs = ast.inputs.length > 0;
   const hasOutputs = ast.outputs.length > 0;
   const hasTools = ast.tools.length > 0;
+  const typedTools = ast.tools.filter((t) => t.input !== void 0);
   const agentType = `Agent<${inputType}, ${hasOutputs ? outputType : "string"}>`;
   const ctx = {
     inputTypes: new Map(ast.inputs.map((f) => [f.name, f.type])),
@@ -1708,15 +1798,20 @@ function generate(ast) {
   };
   const promptCode = promptExpr(ast.prompt, ctx, /* @__PURE__ */ new Map());
   const systemCode = ast.system ? promptExpr(ast.system, ctx, /* @__PURE__ */ new Map()) : void 0;
+  const needsZod = hasInputs || hasOutputs || typedTools.length > 0;
   const lines = [];
   lines.push(`// Generated by toac from ${ast.name}.agent \u2014 do not edit.`);
-  const runtimeImports = ctx.usesToon ? "createAgent, toonValue" : "createAgent";
-  lines.push(`import { ${runtimeImports}, type Agent } from "toad-runtime";`);
-  if (hasInputs || hasOutputs) {
+  const runtimeImports = ["createAgent"];
+  if (typedTools.length > 0)
+    runtimeImports.push("defineTool");
+  if (ctx.usesToon)
+    runtimeImports.push("toonValue");
+  lines.push(`import { ${runtimeImports.join(", ")}, type Agent } from "toad-runtime";`);
+  if (needsZod) {
     lines.push(`import { z } from "zod";`);
   }
   if (hasTools) {
-    lines.push(`import { ${ast.tools.join(", ")} } from "./${ast.name}.tools";`);
+    lines.push(`import { ${ast.tools.map((t) => t.name).join(", ")} } from "./${ast.name}.tools";`);
   }
   for (const sub of ast.uses) {
     lines.push(`import { ${sub} } from "./${sub}";`);
@@ -1728,12 +1823,20 @@ function generate(ast) {
     emitInterface(lines, outputType, ast.outputs);
     lines.push("");
   }
+  for (const t of typedTools) {
+    emitInterface(lines, `${pascalCase(t.name)}Input`, t.input.fields ?? []);
+    lines.push("");
+  }
   if (hasInputs) {
     emitSchema(lines, "inputSchema", ast.inputs);
     lines.push("");
   }
   if (hasOutputs) {
     emitSchema(lines, "outputSchema", ast.outputs);
+    lines.push("");
+  }
+  for (const t of typedTools) {
+    emitToolConst(lines, t);
     lines.push("");
   }
   lines.push(`export const ${ast.name}: ${agentType} = createAgent({`);
@@ -1752,7 +1855,7 @@ function generate(ast) {
     lines.push(`  temperature: ${ast.temperature},`);
   }
   const toolEntries = [
-    ...ast.tools,
+    ...ast.tools.map((t) => t.input === void 0 ? t.name : `${t.name}: ${t.name}Tool`),
     ...ast.uses.map((sub) => `${sub}: ${sub}.asTool()`)
   ];
   if (toolEntries.length > 0) {
@@ -1793,6 +1896,13 @@ function emitSchema(lines, name, fields) {
     const expr = zodExpr(f.type);
     lines.push(`  ${f.name}: ${f.optional === true ? `${expr}.optional()` : expr},`);
   }
+  lines.push(`});`);
+}
+function emitToolConst(lines, t) {
+  lines.push(`const ${t.name}Tool = defineTool<${pascalCase(t.name)}Input>({`);
+  lines.push(`  description: ${JSON.stringify(t.description ?? t.name)},`);
+  lines.push(`  input: ${zodExpr(t.input)},`);
+  lines.push(`  run: ${t.name},`);
   lines.push(`});`);
 }
 function tsType(t) {
@@ -1913,6 +2023,112 @@ function escapeTemplate(s) {
 }
 function pascalCase(name) {
   return name.split(/[_\s]+/).filter((s) => s.length > 0).map((s) => s[0].toUpperCase() + s.slice(1)).join("");
+}
+
+// packages/compiler/dist/format.js
+var CANONICAL_ORDER = [
+  "agent",
+  "model",
+  "description",
+  "inputs",
+  "tools",
+  "prompt",
+  "outputs",
+  "system",
+  "uses",
+  "maxTurns",
+  "retries",
+  "temperature"
+];
+function formatAgent(source, file = "<input>") {
+  const { ast, diagnostics } = analyze(source, file);
+  if (ast === void 0) {
+    return { changed: false, diagnostics };
+  }
+  const sections = parseSections(source).map(formatSection);
+  sections.sort((a, b) => rank(a.key) - rank(b.key));
+  const code = sections.map(renderSection).join("\n") + "\n";
+  const check = analyze(code, file);
+  if (check.ast === void 0 || !sameAst(check.ast, ast)) {
+    return {
+      changed: false,
+      diagnostics: [
+        errorDiagnostic("TOA010", "could not format this file without changing its meaning (please report this)", file)
+      ]
+    };
+  }
+  return { code, changed: code !== source, diagnostics: [] };
+}
+function rank(key) {
+  const i = CANONICAL_ORDER.indexOf(key);
+  return i === -1 ? CANONICAL_ORDER.length : i;
+}
+var BLOCK_HEADER2 = /:\s*\|\s*$/;
+function parseSections(source) {
+  const lines = source.replace(/\r\n/g, "\n").split("\n");
+  const sections = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line.trim() === "" || leadingSpaces2(line) > 0) {
+      i++;
+      continue;
+    }
+    const header = line;
+    const key = /^([A-Za-z_][A-Za-z0-9_]*)/.exec(line)?.[1] ?? line.trim();
+    const body = [];
+    i++;
+    while (i < lines.length) {
+      const l = lines[i];
+      if (l.trim() === "" || leadingSpaces2(l) > 0) {
+        body.push(l);
+        i++;
+      } else {
+        break;
+      }
+    }
+    while (body.length > 0 && body[body.length - 1].trim() === "") {
+      body.pop();
+    }
+    sections.push({ key, header, body, block: BLOCK_HEADER2.test(header) });
+  }
+  return sections;
+}
+function formatSection(s) {
+  return { ...s, header: formatHeader(s.header), body: formatBody(s) };
+}
+function formatHeader(header) {
+  const h = header.replace(/\s+$/, "");
+  const colon = h.indexOf(":");
+  if (colon === -1)
+    return h;
+  const left = h.slice(0, colon).replace(/\s+$/, "");
+  const right = h.slice(colon + 1).trim();
+  return right === "" ? `${left}:` : `${left}: ${right}`;
+}
+function formatBody(s) {
+  const nonBlank = s.body.filter((l) => l.trim() !== "");
+  if (nonBlank.length === 0)
+    return [];
+  const base = Math.min(...nonBlank.map(leadingSpaces2));
+  return s.body.map((l) => {
+    if (l.trim() === "")
+      return "";
+    const content = l.slice(base);
+    return `  ${s.block ? content : content.replace(/\s+$/, "")}`;
+  });
+}
+function renderSection(s) {
+  return [s.header, ...s.body].join("\n");
+}
+function leadingSpaces2(line) {
+  let n = 0;
+  while (n < line.length && line[n] === " ")
+    n++;
+  return n;
+}
+function sameAst(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
 // packages/compiler/dist/index.js
@@ -2085,11 +2301,26 @@ function activate(context) {
     "{",
     "."
   );
+  const formatter = vscode.languages.registerDocumentFormattingEditProvider(
+    "agent",
+    {
+      provideDocumentFormattingEdits(doc) {
+        const { code, changed } = formatAgent(doc.getText(), doc.uri.fsPath);
+        if (code === void 0 || !changed) return [];
+        const fullRange = new vscode.Range(
+          doc.positionAt(0),
+          doc.positionAt(doc.getText().length)
+        );
+        return [vscode.TextEdit.replace(fullRange, code)];
+      }
+    }
+  );
   vscode.workspace.textDocuments.forEach(refresh);
   context.subscriptions.push(
     collection,
     hover,
     completions,
+    formatter,
     vscode.workspace.onDidOpenTextDocument(refresh),
     vscode.workspace.onDidChangeTextDocument((e) => refreshSoon(e.document)),
     vscode.workspace.onDidCloseTextDocument((doc) => {

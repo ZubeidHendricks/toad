@@ -2,7 +2,11 @@
 // files, straight from the real toac compiler (bundled in at build time by
 // `pnpm build:vscode`).
 import * as vscode from "vscode";
-import { analyze, compile } from "../../../packages/compiler/dist/index.js";
+import {
+  analyze,
+  compile,
+  formatAgent,
+} from "../../../packages/compiler/dist/index.js";
 
 const DEBOUNCE_MS = 200;
 
@@ -197,11 +201,30 @@ export function activate(context) {
     ".",
   );
 
+  // Canonical formatting, straight from `toac fmt`. Drives Format Document and
+  // editor.formatOnSave. A whole-document replace is fine: the formatter is
+  // idempotent and refuses to change meaning, so the edit is safe and stable.
+  const formatter = vscode.languages.registerDocumentFormattingEditProvider(
+    "agent",
+    {
+      provideDocumentFormattingEdits(doc) {
+        const { code, changed } = formatAgent(doc.getText(), doc.uri.fsPath);
+        if (code === undefined || !changed) return [];
+        const fullRange = new vscode.Range(
+          doc.positionAt(0),
+          doc.positionAt(doc.getText().length),
+        );
+        return [vscode.TextEdit.replace(fullRange, code)];
+      },
+    },
+  );
+
   vscode.workspace.textDocuments.forEach(refresh);
   context.subscriptions.push(
     collection,
     hover,
     completions,
+    formatter,
     vscode.workspace.onDidOpenTextDocument(refresh),
     vscode.workspace.onDidChangeTextDocument((e) => refreshSoon(e.document)),
     vscode.workspace.onDidCloseTextDocument((doc) => {

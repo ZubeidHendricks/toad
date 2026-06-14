@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0
+
+- **Formatting** — Format Document (and `editor.formatOnSave`) runs the canonical `toac fmt`: keys reordered to the spec's schema order, indentation/spacing/blank lines normalized, prompt/system block content preserved exactly. Invalid files are left untouched.
+
 ## 0.3.0
 
 - **Hover docs** for every top-level key.

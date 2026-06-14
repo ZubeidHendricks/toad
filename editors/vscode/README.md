@@ -20,6 +20,8 @@ outputs[2]{name,type}:
 ## What you get
 
 - **Live diagnostics from the real compiler** — the actual `toac` compiler is bundled in and validates as you type: count mismatches, unknown keys, type errors, undeclared `{inputs.x}` references, unclosed blocks — each with its `TOAxxx` code at the right line
+- **Formatting** — Format Document (and `editor.formatOnSave`) runs the canonical `toac fmt`: keys reordered to the schema order, indentation/spacing normalized, prompt/system block content preserved exactly
+- **Hover docs** for every top-level key, and **completions** for keys, template constructs, and your declared input names
 - Highlighting for keys, `[N]` length markers, `{name,type}` tabular headers, types (including enums like `draft|final` and optional `field?` markers)
 - Template-language highlighting: `{inputs.x}` / `{env.X}` interpolation, `{#each}` loops, `{#if}` conditionals, `{{` literal braces
 - Sensible editing defaults: `#` comments, brace pairs, auto-indent after `prompt: |` and tabular headers
@@ -32,4 +34,4 @@ outputs[2]{name,type}:
 
 ## Roadmap
 
-Hover docs for keys, completions for declared inputs in templates, and a full LSP. Issues and PRs welcome at [ZubeidHendricks/toad](https://github.com/ZubeidHendricks/toad).
+A full language server (go-to-definition, rename, workspace-wide diagnostics). Issues and PRs welcome at [ZubeidHendricks/toad](https://github.com/ZubeidHendricks/toad).
