@@ -1256,6 +1256,91 @@ describe("maxContextTokens compaction", () => {
   });
 });
 
+describe("ephemeral tool results", () => {
+  it("elides an ephemeral result after the model has seen it, keeping the latest", async () => {
+    const fetchPage = defineTool({
+      description: "fetch a page",
+      input: z.object({ url: z.string() }),
+      ephemeral: true,
+      run: ({ url }) => `BODY of ${url} ${"x".repeat(50)}`,
+    });
+    // Two fetches, then an answer.
+    const client = scriptedClient([
+      {
+        stop_reason: "tool_use",
+        content: [
+          {
+            type: "tool_use",
+            id: "f1",
+            name: "fetchPage",
+            input: { url: "/a" },
+          },
+        ],
+      },
+      {
+        stop_reason: "tool_use",
+        content: [
+          {
+            type: "tool_use",
+            id: "f2",
+            name: "fetchPage",
+            input: { url: "/b" },
+          },
+        ],
+      },
+      { stop_reason: "end_turn", content: [{ type: "text", text: "done" }] },
+    ]);
+    const session = createAgent({
+      name: "t",
+      model: "m",
+      tools: { fetchPage },
+      prompt: () => "go",
+      client,
+    }).session({});
+    await session.send();
+
+    const text = JSON.stringify(session.messages);
+    // The first (older) ephemeral result was elided; the most recent survives.
+    expect(text).toContain("ephemeral tool result elided");
+    expect(text).toContain("BODY of /b"); // freshest result kept verbatim
+    expect(text).not.toContain("BODY of /a"); // older one gone
+  });
+
+  it("keeps a non-ephemeral tool's results verbatim across turns", async () => {
+    const tool = defineTool({
+      description: "fetch",
+      input: z.object({ url: z.string() }),
+      run: ({ url }) => `BODY of ${url}`,
+    });
+    const client = scriptedClient([
+      {
+        stop_reason: "tool_use",
+        content: [
+          { type: "tool_use", id: "f1", name: "fetch", input: { url: "/a" } },
+        ],
+      },
+      {
+        stop_reason: "tool_use",
+        content: [
+          { type: "tool_use", id: "f2", name: "fetch", input: { url: "/b" } },
+        ],
+      },
+      { stop_reason: "end_turn", content: [{ type: "text", text: "done" }] },
+    ]);
+    const session = createAgent({
+      name: "t",
+      model: "m",
+      tools: { fetch: tool },
+      prompt: () => "go",
+      client,
+    }).session({});
+    await session.send();
+    const text = JSON.stringify(session.messages);
+    expect(text).toContain("BODY of /a"); // not ephemeral → kept
+    expect(text).not.toContain("ephemeral tool result elided");
+  });
+});
+
 describe("onContext token attribution", () => {
   it("reports a per-call breakdown; history grows across turns", async () => {
     const breakdowns: import("./agent.js").ContextBreakdown[] = [];

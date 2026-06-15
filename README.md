@@ -125,7 +125,8 @@ The generated agent runs a tool-use loop over the Anthropic API with:
 - **Context budgeting** — set `maxContextTokens` (config or `.agent` key) to cap
   the conversation: when a turn's estimated context exceeds it, the oldest tool
   results are elided (oldest first, pairing preserved, the current turn kept), so
-  long loops don't grow unbounded — the single biggest recurring cost.
+  long loops don't grow unbounded — the single biggest recurring cost. Mark a
+  tool `ephemeral` to drop its (one-shot) result on later turns regardless.
 - **Token-efficient tool results** — set `toolResultFormat: "auto"` to feed tool
   results back to the model as TOON instead of JSON when it saves tokens
   (~30–50% on tabular results), so multi-turn loops stay cheap. Defaults to
@@ -198,5 +199,5 @@ copy-paste prompt that turns any LLM into a TOAD author.
 
 ## Status
 
-211 passing tests, green gate (typecheck · test · lint · build). Design docs live
+213 passing tests, green gate (typecheck · test · lint · build). Design docs live
 in [`_bmad-output/`](./_bmad-output/).

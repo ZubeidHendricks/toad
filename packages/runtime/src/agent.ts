@@ -284,6 +284,8 @@ export function createAgent<I, O = string>(
           cacheWriteTokens: 0,
         };
     let started = messages.length > 0;
+    // tool_use ids whose results are ephemeral; elided once a newer turn exists.
+    const ephemeralIds = new Set<string>();
 
     const send = async (message?: string, options?: RunOptions): Promise<O> => {
       const signal = options?.signal;
@@ -329,6 +331,7 @@ export function createAgent<I, O = string>(
         if (config.temperature !== undefined) {
           req.temperature = config.temperature;
         }
+        elideEphemeral(messages, ephemeralIds);
         if (config.maxContextTokens !== undefined) {
           compactHistory(
             messages,
@@ -389,6 +392,7 @@ export function createAgent<I, O = string>(
           signal,
           hooks,
         );
+        for (const e of execs) if (e.ephemeral) ephemeralIds.add(e.id);
         messages.push({ role: "user", content: execs.map((e) => e.content) });
       }
 
@@ -503,6 +507,7 @@ export function createAgent<I, O = string>(
           userText += `\n\nWhen finished, call the \`${RESPOND_TOOL}\` tool with the final result.`;
         }
         const messages: LlmMessage[] = [{ role: "user", content: userText }];
+        const ephemeralIds = new Set<string>();
         const total: TokenUsage = {
           inputTokens: 0,
           outputTokens: 0,
@@ -542,6 +547,7 @@ export function createAgent<I, O = string>(
           };
           let sawUsage = false;
           let message: LlmResponse | undefined;
+          elideEphemeral(messages, ephemeralIds);
           if (config.maxContextTokens !== undefined) {
             compactHistory(
               messages,
@@ -634,6 +640,7 @@ export function createAgent<I, O = string>(
             hooks,
           );
           for (const e of execs) {
+            if (e.ephemeral) ephemeralIds.add(e.id);
             yield {
               type: "tool_result",
               id: e.id,
@@ -718,6 +725,8 @@ interface ToolExecution {
   output: unknown;
   /** The `tool_result` content block fed back into the conversation. */
   content: unknown;
+  /** Whether this tool's results should be elided on later turns. */
+  ephemeral: boolean;
 }
 
 /**
@@ -744,6 +753,7 @@ async function runToolUses<I, O>(
           name: tu.name,
           output: undefined,
           content: toolResult(tu.id, `unknown tool "${tu.name}"`, true),
+          ephemeral: false,
         };
       }
       const input = def.input.safeParse(tu.input);
@@ -757,6 +767,7 @@ async function runToolUses<I, O>(
             `invalid input: ${input.error.message}`,
             true,
           ),
+          ephemeral: false,
         };
       }
       hooks?.onToolCall?.(tu.name, input.data);
@@ -787,6 +798,7 @@ async function runToolUses<I, O>(
         name: tu.name,
         output,
         content: toolResult(tu.id, enc.text),
+        ephemeral: def.ephemeral === true,
       };
     }),
   );
@@ -794,6 +806,38 @@ async function runToolUses<I, O>(
 
 const ELIDED_TOOL_RESULT =
   "[earlier tool result elided to stay within the context budget]";
+
+const ELIDED_EPHEMERAL = "[ephemeral tool result elided after use]";
+
+/**
+ * Elide ephemeral tool results that the model has already seen — every message
+ * but the last (the freshest results the next call still needs). Preserves the
+ * tool_use/result pairing the API requires. Runs regardless of any budget.
+ */
+function elideEphemeral(
+  messages: LlmMessage[],
+  ephemeralIds: Set<string>,
+): void {
+  if (ephemeralIds.size === 0) return;
+  for (let m = 0; m < messages.length - 1; m++) {
+    const content = messages[m]!.content;
+    if (!Array.isArray(content)) continue;
+    for (const block of content as Array<{
+      type?: string;
+      tool_use_id?: string;
+      content?: unknown;
+    }>) {
+      if (
+        block.type === "tool_result" &&
+        typeof block.tool_use_id === "string" &&
+        ephemeralIds.has(block.tool_use_id) &&
+        block.content !== ELIDED_EPHEMERAL
+      ) {
+        block.content = ELIDED_EPHEMERAL;
+      }
+    }
+  }
+}
 
 /**
  * Cap conversation growth in place: while the estimated context exceeds the

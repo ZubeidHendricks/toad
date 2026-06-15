@@ -16,6 +16,14 @@ export interface ToolDef<I = unknown> {
   input: ZodType<I>;
   /** Execution timeout (ms) for this tool; overrides the agent's `toolTimeoutMs`. */
   timeoutMs?: number;
+  /**
+   * Mark this tool's results as needed only once. After the model has seen a
+   * result (i.e. on later turns), the runtime elides it from the conversation —
+   * the result is sent in full to the next call, then replaced with a short
+   * placeholder. Ideal for large one-shot payloads (a page fetch, a big query)
+   * the model reads once and shouldn't pay to re-send every turn.
+   */
+  ephemeral?: boolean;
   run: (input: I, ctx?: ToolRunContext) => unknown | Promise<unknown>;
 }
 

@@ -224,6 +224,19 @@ const agent = createAgent({
 
 It's a soft ceiling based on the same heuristic estimate as `onContext` — watch `onContext`'s `messages` flatten out across turns once it's set. Omitted = no compaction.
 
+### Ephemeral tool results
+
+Some tools return a large payload the model needs to read **once** — a fetched page, a big query dump. Mark such a tool `ephemeral` and its result is sent in full to the next model call, then elided on every turn after (a short placeholder, pairing preserved). This fires regardless of `maxContextTokens`:
+
+```ts
+export const fetch_page = defineTool({
+  description: "Fetch a page",
+  input: z.object({ url: z.string() }),
+  ephemeral: true, // model reads it once; don't re-send it every turn
+  run: ({ url }) => fetchText(url),
+});
+```
+
 ## Token-efficient tool results {#toon-serialization}
 
 Tool results that are objects or arrays go back into the conversation as text — and JSON is a verbose way to do that. `toolResultFormat` controls the encoding:
