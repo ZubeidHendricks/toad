@@ -1,6 +1,6 @@
 # The `.agent` File Format Specification
 
-**Version 0.3 · Status: Draft · June 2026**
+**Version 0.4 · Status: Draft · June 2026**
 
 This document specifies the `.agent` file format used by TOAD (Token-Oriented Agentic Development): a compact, token-oriented, declarative description of an LLM agent, designed to be authored by humans and language models and compiled to typed code.
 
@@ -175,7 +175,7 @@ A document with no error diagnostics is a **valid agent document**.
 
 ## 9. Versioning
 
-This specification is versioned independently of the implementations. Backwards-incompatible changes bump the major version; additions bump the minor version. The version of this document is **0.3** (0.3 added the typed tabular `tools` form, §4.5).
+This specification is versioned independently of the implementations. Backwards-incompatible changes bump the major version; additions bump the minor version. The version of this document is **0.4** (0.3 added the typed tabular `tools` form, §4.5; 0.4 added `maxContextTokens`, §4.11).
 
 ## Appendix A — Complete example
 

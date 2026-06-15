@@ -3,6 +3,23 @@
 All notable changes to `toad-compiler` and `toad-runtime`. The `.agent` format
 is versioned separately in [`SPEC.md`](./SPEC.md).
 
+## 0.4.0
+
+The token-optimization release: measure where tokens go, then bound the cost.
+
+- **`toac cost`** — a static, offline estimate of an agent's per-turn token
+  footprint (the fixed prefix sent every call: system + tool schemas + output
+  schema), with `--json` for tracking in CI.
+- **`onContext` hook** — per-call attribution of input tokens across system /
+  tools / conversation history, so the history growth that dominates long loops
+  is finally visible (the provider's totals don't break this down).
+- **`maxContextTokens`** — a per-turn context budget (config or `.agent` key,
+  SPEC §4.11): when exceeded, the oldest tool results are elided (oldest first,
+  tool_use/result pairing preserved, current turn untouched), bounding the
+  conversation's unbounded growth.
+- Diagnostics now place a caret on the exact source span for `inputs`/`outputs`
+  and typed-tool rows, and for template/block errors inside the prompt.
+
 ## 0.3.0
 
 The language-and-tooling release: typed tools, a canonical formatter, and
