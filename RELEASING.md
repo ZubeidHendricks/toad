@@ -40,7 +40,7 @@ cause and re-run it: `gh run rerun <run-id>`.
 ## The tag is a snapshot — mind what lands after it
 
 The published artifact is built from **the tagged commit**, not from `main`.
-Anything merged to `main` *after* the tag is **unreleased** until the next
+Anything merged to `main` _after_ the tag is **unreleased** until the next
 version. Don't move a published tag; cut a new version instead. (This is why
 features added after `v0.3.0` shipped as `v0.4.0`.)
 
