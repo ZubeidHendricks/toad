@@ -7,7 +7,7 @@ import { analyze } from "./analyze.js";
 import { generate } from "./codegen.js";
 import type { Diagnostic } from "./diagnostics.js";
 
-export const COMPILER_VERSION = "0.4.0";
+export const COMPILER_VERSION = "0.5.0";
 
 export type { Diagnostic } from "./diagnostics.js";
 export {

@@ -3,6 +3,18 @@
 All notable changes to `toad-compiler` and `toad-runtime`. The `.agent` format
 is versioned separately in [`SPEC.md`](./SPEC.md).
 
+## 0.5.0
+
+More token-optimization for the tool loop, on top of 0.4.0's measurement:
+
+- **Ephemeral tool results** — `defineTool({ ephemeral: true })`: a result the
+  model needs only once is sent to the next call, then elided on later turns
+  (placeholder, tool_use/result pairing preserved), regardless of any budget.
+- **Field projection** — `defineTool({ fields: [...] })`: project a result to
+  just the keys the model needs before sending (an object, or each element of an
+  array-of-objects). Composes with `toolResultFormat` — project the shape, then
+  TOON-encode it — and the full result still reaches `onToolResult`.
+
 ## 0.4.0
 
 The token-optimization release: measure where tokens go, then bound the cost.
