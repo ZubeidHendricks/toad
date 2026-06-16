@@ -39,10 +39,25 @@ const agent = createAgent({
   // ...
   toolResultFormat: "auto", // never worse than JSON
   hooks: {
-    onToolResultEncoded: ({ tokensSaved }) => total += tokensSaved,
+    onToolResultEncoded: ({ savedTokens }) => (total += savedTokens),
   },
 });
 ```
+
+## Multi-turn loop: the optimizations compound {#tool-loop}
+
+A real agent runs the tool loop many times, and the whole conversation is re-sent every turn — so the levers stack. This runs a fixed **5-turn** agent (an over-fetching search tool returning 10 uniform rows per call) through each optimization and measures the **total input tokens sent across the run**:
+
+| Config                              | Input tokens | vs baseline |
+| ----------------------------------- | -----------: | ----------: |
+| baseline (JSON, no shaping)         |       28,380 |           — |
+| + TOON `auto` encoding              |       22,860 |  **−19%**   |
+| + field projection (`fields`)       |       18,405 |  **−35%**   |
+| + ephemeral results (`ephemeral`)   |        7,695 |  **−73%**   |
+
+Each layer builds on the last: TOON shrinks each result's encoding, `fields` drops the keys the model doesn't need, and `ephemeral` stops re-sending one-shot results on every later turn (`maxContextTokens` does the same for history under a hard ceiling). Over a long loop the compounding is the whole game — a one-time authoring saving is dwarfed by what the loop re-sends.
+
+Reproduce: `pnpm build && node scripts/bench-tool-loop.mjs` — deterministic, no API key (heuristic token estimate, so the **deltas** are the result, not the absolute counts).
 
 ## Methodology
 
