@@ -24,6 +24,15 @@ export interface ToolDef<I = unknown> {
    * the model reads once and shouldn't pay to re-send every turn.
    */
   ephemeral?: boolean;
+  /**
+   * Project the result down to these top-level keys before it is sent to the
+   * model — cutting tokens when a tool over-fetches (returns 30 fields, the
+   * model needs 3). Applies to an object result, or to each element of an
+   * array-of-objects result; scalars pass through. The full result still
+   * reaches `onToolResult`/`tool_result` events; only what the model sees is
+   * projected, and it composes with `toolResultFormat` (project, then encode).
+   */
+  fields?: string[];
   run: (input: I, ctx?: ToolRunContext) => unknown | Promise<unknown>;
 }
 

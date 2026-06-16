@@ -259,6 +259,21 @@ const agent = createAgent({
 
 On tabular results this saves **30–40%** of the tokens per result — see the measured numbers in [Benchmarks](/benchmarks#tool-results). The `onToolResultEncoded` hook reports per-result savings so you can log "saved N tokens this run".
 
+### Field projection: `fields`
+
+Format (`toolResultFormat`) cuts how a result is encoded; `fields` cuts how much of it is sent. Many tools over-fetch — a search returns 20 hits × 30 fields when the model needs `title` and `url`. List the keys to keep and the runtime strips the rest before encoding (so projection and TOON compound):
+
+```ts
+export const search = defineTool({
+  description: "Search",
+  input: z.object({ q: z.string() }),
+  fields: ["title", "url"], // model sees only these; the rest never ship
+  run: ({ q }) => searchApi(q), // may return the full 30-field payload
+});
+```
+
+It projects an object result, or each element of an array-of-objects result; scalars pass through. The **full** result still reaches `onToolResult` and `tool_result` events — only what the model sees is trimmed.
+
 ### `toonValue()`
 
 Renders any value as TOON for prompt interpolation — the compiler emits this automatically for non-scalar `{inputs.x}` interpolations, so objects never become `[object Object]`:

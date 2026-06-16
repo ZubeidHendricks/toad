@@ -785,7 +785,11 @@ async function runToolUses<I, O>(
         throw new ToolError(tu.name, err);
       }
       hooks?.onToolResult?.(tu.name, output);
-      const enc = serializeResult(output, config.toolResultFormat ?? "json");
+      // Project to declared fields (volume) before encoding (format); the full
+      // output already went to onToolResult above.
+      const projected =
+        def.fields !== undefined ? projectFields(output, def.fields) : output;
+      const enc = serializeResult(projected, config.toolResultFormat ?? "json");
       hooks?.onToolResultEncoded?.({
         tool: tu.name,
         format: enc.format,
@@ -802,6 +806,27 @@ async function runToolUses<I, O>(
       };
     }),
   );
+}
+
+/**
+ * Keep only `fields` of a tool result before it's sent to the model. Projects
+ * an object, or each element of an array of objects; anything else (scalars,
+ * arrays of scalars) passes through unchanged.
+ */
+function projectFields(value: unknown, fields: string[]): unknown {
+  const pick = (obj: Record<string, unknown>): Record<string, unknown> => {
+    const out: Record<string, unknown> = {};
+    for (const key of fields) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) out[key] = obj[key];
+    }
+    return out;
+  };
+  const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+    v !== null && typeof v === "object" && !Array.isArray(v);
+  if (Array.isArray(value)) {
+    return value.map((v) => (isPlainObject(v) ? pick(v) : v));
+  }
+  return isPlainObject(value) ? pick(value) : value;
 }
 
 const ELIDED_TOOL_RESULT =

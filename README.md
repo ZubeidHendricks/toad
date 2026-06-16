@@ -131,7 +131,9 @@ The generated agent runs a tool-use loop over the Anthropic API with:
   results back to the model as TOON instead of JSON when it saves tokens
   (~30–50% on tabular results), so multi-turn loops stay cheap. Defaults to
   `"json"`; `"toon"` always encodes. The `onToolResultEncoded` hook reports the
-  tokens saved per result, so you can log "saved N tokens this run".
+  tokens saved per result, so you can log "saved N tokens this run". Add
+  `fields: [...]` to a tool to **project** its result to just the keys the model
+  needs (volume) before encoding (format) — the two compound.
 - **TOON inputs** — object/array values interpolated into a prompt render as
   TOON automatically, not `[object Object]`.
 
@@ -199,5 +201,5 @@ copy-paste prompt that turns any LLM into a TOAD author.
 
 ## Status
 
-213 passing tests, green gate (typecheck · test · lint · build). Design docs live
+214 passing tests, green gate (typecheck · test · lint · build). Design docs live
 in [`_bmad-output/`](./_bmad-output/).

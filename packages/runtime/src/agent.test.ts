@@ -288,6 +288,53 @@ describe("createAgent", () => {
     expect(content).not.toContain("results[1]{");
   });
 
+  it("projects a tool result to declared fields before sending to the model", async () => {
+    const requests: LlmRequest[] = [];
+    const search = defineTool({
+      description: "search",
+      input: z.object({}),
+      fields: ["title", "url"],
+      run: () => [
+        { title: "A", url: "/a", body: "huge body 1", score: 0.9, raw: {} },
+        { title: "B", url: "/b", body: "huge body 2", score: 0.8, raw: {} },
+      ],
+    });
+    const seen: unknown[] = [];
+    const client: LlmClient = {
+      create: async (req) => {
+        requests.push(req);
+        return requests.length === 1
+          ? {
+              stop_reason: "tool_use",
+              content: [
+                { type: "tool_use", id: "t", name: "search", input: {} },
+              ],
+            }
+          : {
+              stop_reason: "end_turn",
+              content: [{ type: "text", text: "ok" }],
+            };
+      },
+    };
+    const agent = createAgent({
+      name: "t",
+      model: "m",
+      tools: { search },
+      prompt: () => "go",
+      client,
+      hooks: { onToolResult: (_n, out) => seen.push(out) },
+    });
+    await agent.run({});
+    const sent = JSON.stringify(requests[1]?.messages);
+    // Only the projected fields reach the model.
+    expect(sent).toContain("title");
+    expect(sent).toContain("url");
+    expect(sent).not.toContain("huge body");
+    expect(sent).not.toContain("score");
+    // The full result still reached the observability hook.
+    expect(JSON.stringify(seen)).toContain("huge body");
+  });
+
   it("reports token savings via onToolResultEncoded", async () => {
     const events: import("./agent.js").ToolResultEncoding[] = [];
     const rows = defineTool({
