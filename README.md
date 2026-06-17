@@ -172,6 +172,10 @@ toac cost researcher.agent  # estimate the per-turn token footprint
 toac build researcher.agent # → researcher.ts (typed TypeScript)
 ```
 
+`toac lsp` runs a standalone Language Server (stdio): the same diagnostics,
+hovers, completions, and formatting in any LSP editor — Neovim, Helix, Zed,
+Emacs, JetBrains. Setup per editor is in the [ecosystem guide](https://zubeidhendricks.github.io/toad/ecosystem#editor-support).
+
 `toac fmt` is the canonical formatter — like gofmt/rustfmt. It reorders keys to
 the spec's schema order and normalizes indentation, spacing, and blank lines,
 while preserving prompt/system block content exactly (it re-parses its own output

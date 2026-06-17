@@ -37,7 +37,7 @@ var vscode = __toESM(require("vscode"), 1);
 
 // packages/compiler/dist/preprocess.js
 var BLOCK_HEADER = /^([A-Za-z_][A-Za-z0-9_.]*|"(?:[^"\\]|\\.)*"): *\| *$/;
-var TOP_LEVEL_KEY = /^([A-Za-z_][A-Za-z0-9_.]*|"(?:[^"\\]|\\.)*"):/;
+var TOP_LEVEL_KEY = /^([A-Za-z_][A-Za-z0-9_.]*|"(?:[^"\\]|\\.)*")(?::|\[)/;
 function preprocess(source, _file) {
   const lines = source.replace(/\r\n/g, "\n").split("\n");
   const out = [];
@@ -1162,6 +1162,9 @@ var IF = /^#if\s+(!?)\s*([A-Za-z_][A-Za-z0-9_.]*)$/;
 var ELSE_IF = /^:else if\s+(!?)\s*([A-Za-z_][A-Za-z0-9_.]*)$/;
 function parsePromptTemplate(text) {
   const errors = [];
+  const err = (message, offset) => {
+    errors.push({ message, offset });
+  };
   const root = [];
   const stack = [{ kind: "root", segs: root }];
   let buf = "";
@@ -1202,7 +1205,7 @@ function parsePromptTemplate(text) {
         }
       }
       if (end === -1) {
-        errors.push("unterminated interpolation: missing '}'");
+        err("unterminated interpolation: missing '}'", i);
         buf += ch;
         i += 1;
         continue;
@@ -1211,7 +1214,7 @@ function parsePromptTemplate(text) {
       if (inner.startsWith("#each")) {
         const m = EACH.exec(inner);
         if (!m) {
-          errors.push(`invalid {#each}: {${inner}} (use {#each inputs.xs as x} or {#each inputs.xs as x, i})`);
+          err(`invalid {#each}: {${inner}} (use {#each inputs.xs as x} or {#each inputs.xs as x, i})`, i);
           i = end + 1;
           continue;
         }
@@ -1228,7 +1231,8 @@ function parsePromptTemplate(text) {
           source: m[1].split("."),
           item,
           body,
-          elseSegs: []
+          elseSegs: [],
+          start: i
         };
         if (m[3] !== void 0) {
           frame.index = m[3];
@@ -1240,7 +1244,7 @@ function parsePromptTemplate(text) {
       if (inner.startsWith("#if")) {
         const m = IF.exec(inner);
         if (!m) {
-          errors.push(`invalid {#if}: {${inner}} (use {#if inputs.flag} or {#if !inputs.flag})`);
+          err(`invalid {#if}: {${inner}} (use {#if inputs.flag} or {#if !inputs.flag})`, i);
           i = end + 1;
           continue;
         }
@@ -1254,7 +1258,8 @@ function parsePromptTemplate(text) {
           kind: "if",
           segs: first.body,
           branches: [first],
-          elseSegs: []
+          elseSegs: [],
+          start: i
         });
         i = eatNewline(end + 1);
         continue;
@@ -1263,12 +1268,12 @@ function parsePromptTemplate(text) {
         const m = ELSE_IF.exec(inner);
         const frame = top();
         if (!m) {
-          errors.push(`invalid {:else if}: {${inner}}`);
+          err(`invalid {:else if}: {${inner}}`, i);
           i = end + 1;
           continue;
         }
         if (frame.kind !== "if") {
-          errors.push("unexpected {:else if}");
+          err("unexpected {:else if}", i);
           i = end + 1;
           continue;
         }
@@ -1287,7 +1292,7 @@ function parsePromptTemplate(text) {
         flush();
         const frame = top();
         if (frame.kind !== "if" && frame.kind !== "each") {
-          errors.push("unexpected {:else}");
+          err("unexpected {:else}", i);
           i = end + 1;
           continue;
         }
@@ -1299,7 +1304,7 @@ function parsePromptTemplate(text) {
         flush();
         const frame = top();
         if (frame.kind !== "each") {
-          errors.push("unexpected {/each}");
+          err("unexpected {/each}", i);
           i = end + 1;
           continue;
         }
@@ -1324,7 +1329,7 @@ function parsePromptTemplate(text) {
         flush();
         const frame = top();
         if (frame.kind !== "if") {
-          errors.push("unexpected {/if}");
+          err("unexpected {/if}", i);
           i = end + 1;
           continue;
         }
@@ -1347,7 +1352,7 @@ function parsePromptTemplate(text) {
         continue;
       }
       if (inner === "" || !PATH.test(inner)) {
-        errors.push(`invalid interpolation: {${inner}}`);
+        err(`invalid interpolation: {${inner}}`, i);
         i = end + 1;
         continue;
       }
@@ -1357,7 +1362,7 @@ function parsePromptTemplate(text) {
       continue;
     }
     if (ch === "}") {
-      errors.push("unexpected '}' (use '}}' for a literal brace)");
+      err("unexpected '}' (use '}}' for a literal brace)", i);
       buf += ch;
       i += 1;
       continue;
@@ -1367,7 +1372,7 @@ function parsePromptTemplate(text) {
   }
   flush();
   if (stack.length > 1) {
-    errors.push("unclosed block (missing {/each} or {/if})");
+    err("unclosed block (missing {/each} or {/if})", top().start ?? text.length);
   }
   return { segments: root, errors };
 }
@@ -1383,14 +1388,32 @@ var ALLOWED_KEYS = /* @__PURE__ */ new Set([
   "outputs",
   "system",
   "maxTurns",
+  "maxContextTokens",
   "retries",
   "temperature",
   "uses"
 ]);
 var IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
-function validate(value, file, keyLines) {
+function validate(value, file, keyLines, source) {
   const diagnostics = [];
   const at = (key) => ({ line: keyLines.get(key) });
+  const srcLines = source?.split(/\r?\n/);
+  const rowAt = (key, index) => {
+    const headerLine = keyLines.get(key);
+    if (headerLine === void 0 || srcLines === void 0) {
+      return { line: headerLine };
+    }
+    const lineNo = headerLine + 1 + index;
+    const text = srcLines[lineNo - 1] ?? "";
+    const trimmed = text.trim();
+    if (trimmed === "")
+      return { line: headerLine };
+    return {
+      line: lineNo,
+      col: text.length - text.trimStart().length + 1,
+      length: trimmed.length
+    };
+  };
   if (!isObject(value)) {
     diagnostics.push(errorDiagnostic("TOA201", "an .agent file must be a TOON object", file));
     return { diagnostics };
@@ -1420,18 +1443,19 @@ function validate(value, file, keyLines) {
       diagnostics.push(errorDiagnostic("TOA204", `"description" must be a string`, file, at("description")));
     }
   }
-  const inputs = parseFields(value, "inputs", file, diagnostics, at);
-  const outputs = parseFields(value, "outputs", file, diagnostics, at);
-  const tools = parseTools(value, file, diagnostics, at);
+  const inputs = parseFields(value, "inputs", file, diagnostics, at, rowAt);
+  const outputs = parseFields(value, "outputs", file, diagnostics, at, rowAt);
+  const tools = parseTools(value, file, diagnostics, at, rowAt);
   const uses = parseUses(value, file, diagnostics, at);
   const maxTurns = parseIntKey(value, "maxTurns", file, diagnostics, at);
+  const maxContextTokens = parseIntKey(value, "maxContextTokens", file, diagnostics, at);
   const retries = parseIntKey(value, "retries", file, diagnostics, at);
   const temperature = parseTemperature(value, file, diagnostics, at);
-  const prompt = typeof promptText === "string" ? parsePrompt(promptText, inputs, file, diagnostics, at) : [];
+  const prompt = typeof promptText === "string" ? parsePrompt(promptText, inputs, file, diagnostics, keyLines.get("prompt"), srcLines) : [];
   let system;
   if (value.system !== void 0) {
     if (typeof value.system === "string") {
-      system = parsePrompt(value.system, inputs, file, diagnostics, at);
+      system = parsePrompt(value.system, inputs, file, diagnostics, keyLines.get("system"), srcLines);
     } else {
       diagnostics.push(errorDiagnostic("TOA204", `"system" must be a string`, file, at("system")));
     }
@@ -1456,6 +1480,9 @@ function validate(value, file, keyLines) {
   }
   if (maxTurns !== void 0) {
     ast.maxTurns = maxTurns;
+  }
+  if (maxContextTokens !== void 0) {
+    ast.maxContextTokens = maxContextTokens;
   }
   if (retries !== void 0) {
     ast.retries = retries;
@@ -1518,7 +1545,7 @@ function requireString(obj, key, file, diagnostics, at) {
   }
   return v;
 }
-function parseFields(obj, key, file, diagnostics, at) {
+function parseFields(obj, key, file, diagnostics, at, rowAt) {
   const arr = obj[key];
   if (arr === void 0) {
     return [];
@@ -1528,29 +1555,29 @@ function parseFields(obj, key, file, diagnostics, at) {
     return [];
   }
   const fields = [];
-  for (const item of arr) {
+  arr.forEach((item, index) => {
     if (!isObject(item) || typeof item.name !== "string" || typeof item.type !== "string") {
-      diagnostics.push(errorDiagnostic("TOA210", `each "${key}" row needs a string name and type`, file, at(key)));
-      continue;
+      diagnostics.push(errorDiagnostic("TOA210", `each "${key}" row needs a string name and type`, file, rowAt(key, index)));
+      return;
     }
     const rawName = item.name;
     const rawType = item.type;
     const optional = rawName.endsWith("?");
     const name = optional ? rawName.slice(0, -1) : rawName;
     if (!IDENT.test(name)) {
-      diagnostics.push(errorDiagnostic("TOA211", `"${key}" name "${name}" must be an identifier`, file, at(key)));
-      continue;
+      diagnostics.push(errorDiagnostic("TOA211", `"${key}" name "${name}" must be an identifier`, file, rowAt(key, index)));
+      return;
     }
     const type = parseType(rawType);
     if (type === void 0) {
-      diagnostics.push(errorDiagnostic("TOA212", `"${key}" has unsupported type "${rawType}" (use string | number | boolean, optional "[]")`, file, at(key)));
-      continue;
+      diagnostics.push(errorDiagnostic("TOA212", `"${key}" has unsupported type "${rawType}" (use string | number | boolean, optional "[]")`, file, rowAt(key, index)));
+      return;
     }
     fields.push(optional ? { name, type, optional } : { name, type });
-  }
+  });
   return fields;
 }
-function parseTools(obj, file, diagnostics, at) {
+function parseTools(obj, file, diagnostics, at, rowAt) {
   const arr = obj.tools;
   if (arr === void 0) {
     return [];
@@ -1561,65 +1588,90 @@ function parseTools(obj, file, diagnostics, at) {
   }
   const tools = [];
   const seen = /* @__PURE__ */ new Set();
-  const push = (decl) => {
+  const push = (decl, loc) => {
     if (seen.has(decl.name)) {
-      diagnostics.push(errorDiagnostic("TOA224", `duplicate tool name "${decl.name}"`, file, at("tools")));
+      diagnostics.push(errorDiagnostic("TOA224", `duplicate tool name "${decl.name}"`, file, loc));
       return;
     }
     seen.add(decl.name);
     tools.push(decl);
   };
-  for (const t of arr) {
+  arr.forEach((t, index) => {
     if (typeof t === "string") {
       if (!IDENT.test(t)) {
-        diagnostics.push(badToolName(t, file, at));
-        continue;
+        diagnostics.push(badToolName(t, file, at("tools")));
+        return;
       }
-      push({ name: t });
-      continue;
+      push({ name: t }, at("tools"));
+      return;
     }
+    const loc = rowAt("tools", index);
     if (isObject(t) && typeof t.name === "string") {
       const name = t.name;
       if (!IDENT.test(name)) {
-        diagnostics.push(badToolName(name, file, at));
-        continue;
+        diagnostics.push(badToolName(name, file, loc));
+        return;
       }
       if (typeof t.input !== "string") {
-        diagnostics.push(errorDiagnostic("TOA222", `typed tool "${name}" needs a string input type`, file, at("tools")));
-        continue;
+        diagnostics.push(errorDiagnostic("TOA222", `typed tool "${name}" needs a string input type`, file, loc));
+        return;
       }
       const input = parseType(t.input);
       if (input === void 0 || input.base !== "object" || input.array) {
-        diagnostics.push(errorDiagnostic("TOA223", `tool "${name}" input must be an object type like "{query:string}"`, file, at("tools")));
-        continue;
+        diagnostics.push(errorDiagnostic("TOA223", `tool "${name}" input must be an object type like "{query:string}"`, file, loc));
+        return;
       }
       const decl = { name, input };
       if (typeof t.description === "string") {
         decl.description = t.description;
       }
-      push(decl);
-      continue;
+      push(decl, loc);
+      return;
     }
-    diagnostics.push(errorDiagnostic("TOA221", `each tool must be a name or a {name,input} row, got ${JSON.stringify(t)}`, file, at("tools")));
-  }
+    diagnostics.push(errorDiagnostic("TOA221", `each tool must be a name or a {name,input} row, got ${JSON.stringify(t)}`, file, loc));
+  });
   return tools;
 }
-function badToolName(value, file, at) {
-  return errorDiagnostic("TOA221", `tool name must be an identifier, got ${JSON.stringify(value)}`, file, at("tools"));
+function badToolName(value, file, loc) {
+  return errorDiagnostic("TOA221", `tool name must be an identifier, got ${JSON.stringify(value)}`, file, loc);
 }
-function parsePrompt(text, inputs, file, diagnostics, at) {
+function parsePrompt(text, inputs, file, diagnostics, blockLine, srcLines) {
+  const locFor = (offset) => {
+    if (blockLine === void 0)
+      return {};
+    if (srcLines === void 0)
+      return { line: blockLine };
+    const lineNo = blockLine + 1 + countNewlines(text, offset);
+    const srcText = srcLines[lineNo - 1] ?? "";
+    const trimmed = srcText.trim();
+    if (trimmed === "")
+      return { line: lineNo };
+    return {
+      line: lineNo,
+      col: srcText.length - srcText.trimStart().length + 1,
+      length: trimmed.length
+    };
+  };
   const ctx = {
     inputTypes: new Map(inputs.map((f) => [f.name, f.type])),
     file,
     diagnostics,
-    at
+    header: { line: blockLine }
   };
   const { segments, errors } = parsePromptTemplate(text);
-  for (const message of errors) {
-    diagnostics.push(errorDiagnostic("TOA302", message, file, at("prompt")));
+  for (const e of errors) {
+    diagnostics.push(errorDiagnostic("TOA302", e.message, file, locFor(e.offset)));
   }
   validatePromptSegments(segments, /* @__PURE__ */ new Map(), ctx);
   return segments;
+}
+function countNewlines(text, offset) {
+  let n = 0;
+  for (let i = 0; i < offset && i < text.length; i++) {
+    if (text[i] === "\n")
+      n++;
+  }
+  return n;
 }
 var NUMBER_TYPE = { base: "number", array: false };
 function resolveFieldPath(type, rest) {
@@ -1643,7 +1695,7 @@ function badInterp(path, ctx) {
     if (hint !== void 0)
       help = `did you mean \`inputs.${hint}\`?`;
   }
-  ctx.diagnostics.push(errorDiagnostic("TOA301", `invalid interpolation {${path.join(".")}} (unknown name or field)`, ctx.file, { ...ctx.at("prompt"), ...help !== void 0 ? { help } : {} }));
+  ctx.diagnostics.push(errorDiagnostic("TOA301", `invalid interpolation {${path.join(".")}} (unknown name or field)`, ctx.file, { ...ctx.header, ...help !== void 0 ? { help } : {} }));
 }
 function validatePromptSegments(segments, vars, ctx) {
   for (const seg of segments) {
@@ -1664,7 +1716,7 @@ function validatePromptSegments(segments, vars, ctx) {
     } else if (seg.kind === "each") {
       const sourceType = seg.source.length === 2 && seg.source[0] === "inputs" ? ctx.inputTypes.get(seg.source[1]) : void 0;
       if (sourceType === void 0 || !sourceType.array) {
-        ctx.diagnostics.push(errorDiagnostic("TOA303", `{#each ${seg.source.join(".")}} must iterate a declared array input (a "[]" type)`, ctx.file, ctx.at("prompt")));
+        ctx.diagnostics.push(errorDiagnostic("TOA303", `{#each ${seg.source.join(".")}} must iterate a declared array input (a "[]" type)`, ctx.file, ctx.header));
         continue;
       }
       const elementType = sourceType.fields ? { base: sourceType.base, array: false, fields: sourceType.fields } : { base: sourceType.base, array: false };
@@ -1672,12 +1724,12 @@ function validatePromptSegments(segments, vars, ctx) {
       if (seg.item.kind === "name") {
         inner.set(seg.item.name, elementType);
       } else if (elementType.base !== "object" || elementType.fields === void 0) {
-        ctx.diagnostics.push(errorDiagnostic("TOA306", `cannot destructure {#each ${seg.source.join(".")}}: its elements are not objects`, ctx.file, ctx.at("prompt")));
+        ctx.diagnostics.push(errorDiagnostic("TOA306", `cannot destructure {#each ${seg.source.join(".")}}: its elements are not objects`, ctx.file, ctx.header));
       } else {
         for (const field of seg.item.fields) {
           const decl = elementType.fields.find((f) => f.name === field);
           if (decl === void 0) {
-            ctx.diagnostics.push(errorDiagnostic("TOA306", `{#each \u2026 as { ${field} }} \u2014 the element has no field "${field}"`, ctx.file, ctx.at("prompt")));
+            ctx.diagnostics.push(errorDiagnostic("TOA306", `{#each \u2026 as { ${field} }} \u2014 the element has no field "${field}"`, ctx.file, ctx.header));
           } else {
             inner.set(field, decl.type);
           }
@@ -1693,7 +1745,7 @@ function validatePromptSegments(segments, vars, ctx) {
     } else if (seg.kind === "if") {
       const condType = seg.cond.length === 2 && seg.cond[0] === "inputs" ? ctx.inputTypes.get(seg.cond[1]) : void 0;
       if (condType === void 0 || condType.base !== "boolean" || condType.array) {
-        ctx.diagnostics.push(errorDiagnostic("TOA305", `{#if ${seg.cond.join(".")}} must test a boolean input (a "boolean" type)`, ctx.file, ctx.at("prompt")));
+        ctx.diagnostics.push(errorDiagnostic("TOA305", `{#if ${seg.cond.join(".")}} must test a boolean input (a "boolean" type)`, ctx.file, ctx.header));
       }
       validatePromptSegments(seg.then, vars, ctx);
       validatePromptSegments(seg.else, vars, ctx);
@@ -1778,7 +1830,7 @@ function analyze(source, file) {
   if (decoded.value === void 0 || decoded.diagnostics.length > 0) {
     return { diagnostics: decoded.diagnostics };
   }
-  return validate(decoded.value, file, pre.keyLines);
+  return validate(decoded.value, file, pre.keyLines, source);
 }
 
 // packages/compiler/dist/codegen.js
@@ -1847,6 +1899,9 @@ function generate(ast) {
   }
   if (ast.maxTurns !== void 0) {
     lines.push(`  maxTurns: ${ast.maxTurns},`);
+  }
+  if (ast.maxContextTokens !== void 0) {
+    lines.push(`  maxContextTokens: ${ast.maxContextTokens},`);
   }
   if (ast.retries !== void 0) {
     lines.push(`  retries: ${ast.retries},`);
@@ -2131,17 +2186,7 @@ function sameAst(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-// packages/compiler/dist/index.js
-function compile(source, file = "<input>") {
-  const { ast, diagnostics } = analyze(source, file);
-  if (ast === void 0) {
-    return { diagnostics };
-  }
-  return { code: generate(ast), diagnostics };
-}
-
-// editors/vscode/src/extension.mjs
-var DEBOUNCE_MS = 200;
+// packages/compiler/dist/editor.js
 var KEY_DOCS = {
   agent: "**agent** (required) \u2014 the agent's name: an identifier, also the emitted export and filename.",
   model: "**model** (required) \u2014 a Claude model id, e.g. `claude-opus-4-7`.",
@@ -2153,6 +2198,7 @@ var KEY_DOCS = {
   system: "**system: |** \u2014 system prompt block; defaults to the description when absent.",
   uses: "**uses[N]: a,b** \u2014 sub-agents wired in as tools via `asTool()`.",
   maxTurns: "**maxTurns** \u2014 tool-use turn cap (default 8).",
+  maxContextTokens: "**maxContextTokens** \u2014 soft per-turn context budget; oldest tool results are elided once a turn exceeds it.",
   retries: "**retries** \u2014 retry the model call this many times on error.",
   temperature: "**temperature** \u2014 sampling temperature, a number from 0 to 1; omit for the API default."
 };
@@ -2165,23 +2211,101 @@ var TEMPLATE_DOCS = {
   "inputs.": "`{inputs.<name>}` \u2014 interpolate a declared input.",
   "env.": "`{env.<NAME>}` \u2014 interpolate an environment variable (empty string when unset)."
 };
-function inputNames(doc) {
-  const text = doc.getText();
+function inputNames(source, file = "<input>") {
   try {
-    const { ast } = analyze(text, doc.uri.fsPath);
-    if (ast) return ast.inputs.map((f) => f.name);
+    const { ast } = analyze(source, file);
+    if (ast)
+      return ast.inputs.map((f) => f.name);
   } catch {
   }
   const names = [];
-  const m = text.match(/^inputs\[\d+\][^\n]*\n((?:[ ]{2}[^\n]*\n?)*)/m);
+  const m = source.match(/^inputs\[\d+\][^\n]*\n((?:[ ]{2}[^\n]*\n?)*)/m);
   if (m) {
     for (const row of m[1].split("\n")) {
       const r = /^ {2}([A-Za-z_][A-Za-z0-9_]*)\??,/.exec(row);
-      if (r) names.push(r[1]);
+      if (r)
+        names.push(r[1]);
     }
   }
   return names;
 }
+function lineAt(source, line) {
+  return source.split("\n")[line] ?? "";
+}
+function hoverAt(source, line, character) {
+  const text = lineAt(source, line);
+  const m = /^([A-Za-z_][A-Za-z0-9_]*)(?=[:[])/.exec(text);
+  if (m && KEY_DOCS[m[1]] && character <= m[1].length) {
+    return { contents: KEY_DOCS[m[1]] };
+  }
+  return void 0;
+}
+function completionsAt(source, line, character, file = "<input>") {
+  const before = lineAt(source, line).slice(0, character);
+  if (/\{inputs\.[A-Za-z0-9_]*$/.test(before)) {
+    return inputNames(source, file).map((name) => ({
+      label: name,
+      kind: "variable",
+      detail: "declared input"
+    }));
+  }
+  if (/\{[#:/A-Za-z]*$/.test(before) && before.includes("{")) {
+    return Object.entries(TEMPLATE_DOCS).map(([label, documentation]) => {
+      const item = { label, kind: "keyword", documentation };
+      if (label === "#each") {
+        item.insertText = "#each inputs.${1:items} as ${2:item}}\n$0\n{/each}";
+        item.snippet = true;
+      } else if (label === "#if") {
+        item.insertText = "#if inputs.${1:flag}}\n$0\n{/if}";
+        item.snippet = true;
+      }
+      return item;
+    });
+  }
+  if (/^[A-Za-z]*$/.test(before)) {
+    return Object.entries(KEY_DOCS).map(([key, documentation]) => {
+      const item = {
+        label: key,
+        kind: "property",
+        documentation
+      };
+      if (key === "inputs" || key === "outputs") {
+        item.insertText = `${key}[\${1:1}]{name,type}:
+  \${2:name},\${3:string}`;
+        item.snippet = true;
+      } else if (key === "prompt" || key === "system") {
+        item.insertText = `${key}: |
+  $0`;
+        item.snippet = true;
+      } else if (key === "tools" || key === "uses") {
+        item.insertText = `${key}[\${1:1}]: \${2:name}`;
+        item.snippet = true;
+      } else {
+        item.insertText = `${key}: $0`;
+        item.snippet = true;
+      }
+      return item;
+    });
+  }
+  return [];
+}
+
+// packages/compiler/dist/index.js
+function compile(source, file = "<input>") {
+  const { ast, diagnostics } = analyze(source, file);
+  if (ast === void 0) {
+    return { diagnostics };
+  }
+  return { code: generate(ast), diagnostics };
+}
+
+// editors/vscode/src/extension.mjs
+var DEBOUNCE_MS = 200;
+var COMPLETION_KIND = {
+  property: vscode.CompletionItemKind.Property,
+  keyword: vscode.CompletionItemKind.Keyword,
+  variable: vscode.CompletionItemKind.Variable
+};
 function activate(context) {
   const collection = vscode.languages.createDiagnosticCollection("toad");
   const timers = /* @__PURE__ */ new Map();
@@ -2228,74 +2352,33 @@ function activate(context) {
   };
   const hover = vscode.languages.registerHoverProvider("agent", {
     provideHover(doc, position) {
-      const line = doc.lineAt(position.line).text;
-      const m = /^([A-Za-z_][A-Za-z0-9_]*)(?=[:\[])/.exec(line);
-      if (m && KEY_DOCS[m[1]] && position.character <= m[1].length) {
-        return new vscode.Hover(new vscode.MarkdownString(KEY_DOCS[m[1]]));
-      }
-      return void 0;
+      const result = hoverAt(doc.getText(), position.line, position.character);
+      return result ? new vscode.Hover(new vscode.MarkdownString(result.contents)) : void 0;
     }
   });
   const completions = vscode.languages.registerCompletionItemProvider(
     "agent",
     {
       provideCompletionItems(doc, position) {
-        const before = doc.lineAt(position.line).text.slice(0, position.character);
-        if (/\{inputs\.[A-Za-z0-9_]*$/.test(before)) {
-          return inputNames(doc).map((name) => {
-            const item = new vscode.CompletionItem(
-              name,
-              vscode.CompletionItemKind.Variable
-            );
-            item.detail = "declared input";
-            return item;
-          });
-        }
-        if (/\{[#:/A-Za-z]*$/.test(before) && before.includes("{")) {
-          return Object.entries(TEMPLATE_DOCS).map(([label, doc_]) => {
-            const item = new vscode.CompletionItem(
-              label,
-              vscode.CompletionItemKind.Keyword
-            );
-            item.documentation = new vscode.MarkdownString(doc_);
-            if (label === "#each") {
-              item.insertText = new vscode.SnippetString(
-                "#each inputs.${1:items} as ${2:item}}\n$0\n{/each}"
-              );
-            } else if (label === "#if") {
-              item.insertText = new vscode.SnippetString(
-                "#if inputs.${1:flag}}\n$0\n{/if}"
-              );
-            }
-            return item;
-          });
-        }
-        if (/^[A-Za-z]*$/.test(before)) {
-          return Object.entries(KEY_DOCS).map(([key, doc_]) => {
-            const item = new vscode.CompletionItem(
-              key,
-              vscode.CompletionItemKind.Property
-            );
-            item.documentation = new vscode.MarkdownString(doc_);
-            if (key === "inputs" || key === "outputs") {
-              item.insertText = new vscode.SnippetString(
-                `${key}[\${1:1}]{name,type}:
-  \${2:name},\${3:string}`
-              );
-            } else if (key === "prompt" || key === "system") {
-              item.insertText = new vscode.SnippetString(`${key}: |
-  $0`);
-            } else if (key === "tools" || key === "uses") {
-              item.insertText = new vscode.SnippetString(
-                `${key}[\${1:1}]: \${2:name}`
-              );
-            } else {
-              item.insertText = new vscode.SnippetString(`${key}: $0`);
-            }
-            return item;
-          });
-        }
-        return void 0;
+        const items = completionsAt(
+          doc.getText(),
+          position.line,
+          position.character,
+          doc.uri.fsPath
+        );
+        return items.map((it) => {
+          const item = new vscode.CompletionItem(
+            it.label,
+            COMPLETION_KIND[it.kind] ?? vscode.CompletionItemKind.Text
+          );
+          if (it.detail) item.detail = it.detail;
+          if (it.documentation)
+            item.documentation = new vscode.MarkdownString(it.documentation);
+          if (it.insertText !== void 0) {
+            item.insertText = it.snippet ? new vscode.SnippetString(it.insertText) : it.insertText;
+          }
+          return item;
+        });
       }
     },
     "{",

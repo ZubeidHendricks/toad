@@ -3,6 +3,26 @@
 All notable changes to `toad-compiler` and `toad-runtime`. The `.agent` format
 is versioned separately in [`SPEC.md`](./SPEC.md).
 
+## 0.6.0
+
+The editor-everywhere release: the diagnostics `toac check` produces now reach
+any editor, not just VS Code.
+
+- **`toac lsp`** — a standalone [Language Server](https://microsoft.github.io/language-server-protocol/)
+  over stdio. Diagnostics, hovers, completions, and formatting for `.agent`
+  files in Neovim, Helix, Zed, Emacs, JetBrains — anything that speaks LSP. It
+  runs the real compiler front-end (`analyze`/`compile`/`formatAgent`), so there
+  is no second implementation to drift. Dependency-free wire protocol; the
+  message handler (`createServer`) is exported and synchronous, so it is fully
+  testable without a process. See [`ecosystem.md`](./site/ecosystem.md#editor-support)
+  for per-editor setup.
+- **Editor services API** — `hoverAt`, `completionsAt`, `inputNames`, and the
+  `KEY_DOCS`/`TEMPLATE_DOCS` tables are now exported from `toad-compiler` as
+  editor-agnostic, 0-based-position functions. Both the VS Code extension and
+  `toac lsp` consume them, so hover/completion stay identical across editors.
+- The VS Code extension now sources hover and completion from those shared
+  services instead of its own copies.
+
 ## 0.5.0
 
 More token-optimization for the tool loop, on top of 0.4.0's measurement:

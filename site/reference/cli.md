@@ -13,6 +13,7 @@ toac <build|check> <paths...> [--outDir <dir>]
 toac fmt [--check] <paths...>
 toac cost [--json] <paths...>
 toac init <name>
+toac lsp
 ```
 
 Paths may be `.agent` files or directories — directories are scanned recursively for `.agent` files. Globbing is the shell's job.
@@ -82,6 +83,16 @@ toac cost researcher.agent
 ```
 
 `--json` emits `{ file, ...report }` per agent, for tracking the number in CI over time. Estimates are heuristic and offline (no provider tokenizer); treat them as relative — compare agents, or before/after a change. Tool-result and conversation-history tokens are runtime-dependent; the runtime reports those.
+
+### `toac lsp`
+
+Start a [Language Server](https://microsoft.github.io/language-server-protocol/) over stdio. It gives any LSP-capable editor the same diagnostics as `toac check`, plus hovers, completions, and `toac fmt` formatting — by running the real compiler, so there's no second implementation to drift.
+
+```bash
+toac lsp   # speaks LSP on stdin/stdout; your editor launches it for you
+```
+
+You don't run this by hand — point your editor at it. Per-editor setup (Neovim, Helix, Zed, Emacs, JetBrains) is in the [ecosystem guide](/ecosystem#editor-support). The [VS Code extension](/ecosystem#vs-code) bundles the compiler directly and needs no separate server.
 
 ## Flags
 

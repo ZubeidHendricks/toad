@@ -21,6 +21,16 @@ export { analyze, type AnalyzeResult } from "./analyze.js";
 export { generate } from "./codegen.js";
 export { formatAgent, type FormatResult } from "./format.js";
 export {
+  KEY_DOCS,
+  TEMPLATE_DOCS,
+  inputNames,
+  hoverAt,
+  completionsAt,
+  type CompletionItem,
+  type CompletionKind,
+  type HoverResult,
+} from "./editor.js";
+export {
   estimateAgentCost,
   formatCostReport,
   type CostReport,
