@@ -19,6 +19,61 @@ npm i -g toad-compiler@0.6.0
 
 A standard needs tooling everywhere code is written. This is that pillar.
 
+## TOAD 0.5.0 — results the model reads once {#v0-5-0}
+
+_June 16, 2026_
+
+0.4.0 made tool-loop token cost _visible_; 0.5.0 gives you two precise tools to cut it, per tool:
+
+- **Ephemeral tool results** — `defineTool({ ephemeral: true })`. A result the model needs only once is sent on the next call, then elided on later turns (placeholder kept, `tool_use`/`tool_result` pairing preserved), no matter the budget. For tools whose output stops mattering the moment it's been read.
+- **Field projection** — `defineTool({ fields: [...] })`. Project a result down to just the keys the model needs before it's sent — an object, or each element of an array-of-objects. Composes with `toolResultFormat`: project the shape, then TOON-encode it. The full result still reaches your `onToolResult` hook.
+
+```bash
+npm i toad-runtime@0.5.0
+```
+
+## TOAD 0.4.0 — measure the tool loop, then bound it {#v0-4-0}
+
+_June 15, 2026_
+
+Long agent runs are dominated by tokens you can't see: schemas re-sent every call, and conversation history that grows without limit. 0.4.0 makes both legible and puts a ceiling on the second:
+
+- **`toac cost`** — a static, offline estimate of an agent's per-turn footprint: the fixed prefix (system + tool schemas + output schema) sent on every model call, which is exactly the part prompt caching serves cheaply. `--json` tracks it in CI.
+- **`onContext` hook** — per-call attribution of input tokens across system / tools / history, so the growth that dominates long loops is finally visible (the provider's totals don't break this down).
+- **`maxContextTokens`** — a per-turn context budget ([SPEC §4.11](/reference/spec)). Over it, the oldest tool results are elided (oldest first, pairing preserved, current turn untouched), bounding the conversation's unbounded growth.
+- Diagnostics now place a caret on the exact span for `inputs`/`outputs`, typed-tool rows, and template/block errors inside the prompt.
+
+```bash
+npm i -g toad-compiler@0.4.0
+toac cost researcher.agent
+```
+
+## TOAD 0.3.0 — language-grade craft {#v0-3-0}
+
+_June 14, 2026_
+
+The release that treats `.agent` as a language, not a config format: typed tools, a canonical formatter, rustc-style diagnostics, and a much richer runtime.
+
+**Language & compiler**
+
+- **Typed tool schemas** — the tabular `tools[N]{name,input}:` form lets the `.agent` file own each tool's input schema; `toac` emits the schema + a typed `defineTool`, so `<agent>.tools.ts` supplies only the `run` body ([SPEC §4.5](/reference/spec)).
+- **Rich diagnostics** — rustc/Elm-style code frames with a caret under the span, plus `did you mean?` suggestions (Damerau–Levenshtein) for mistyped keys and `{inputs.x}` references.
+- **Enum types** (`draft|final`) → a literal union + `z.enum`; **optional inputs** (`detail?,string`); the `temperature` key; enforced tool-name uniqueness.
+
+**Tooling**
+
+- **`toac fmt`** — TOAD's gofmt/rustfmt (with `--check` for CI). Reorders keys to the schema order and normalizes spacing, while preserving prompt/system blocks exactly — it re-parses its own output and refuses to write if the meaning would change.
+
+**Runtime**
+
+- **Multi-turn sessions** (`agent.session`) with a resumable `state` snapshot; **a streaming tool loop** (`agent.runStream` / `agent.stream`); **MCP export** (`serveMcp` from `toad-runtime/mcp`) serving compiled agents as Model Context Protocol tools; **composition** (`asTool` with cancellation + usage roll-up); usage accounting (incl. prompt-cache reads/writes), parallel tool calls, cancellation, tool timeouts, retries, and token-efficient TOON tool results (`toolResultFormat: "auto"`).
+- **VS Code extension 0.4.0** — live diagnostics, hover docs, completions, and format-on-save from the bundled compiler.
+
+```bash
+npm i -g toad-compiler@0.3.0
+npm i toad-runtime@0.3.0
+```
+
 ## TOAD 0.2.0 — the standard takes shape {#v0-2-0}
 
 _June 12, 2026_
