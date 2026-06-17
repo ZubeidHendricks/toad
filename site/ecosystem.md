@@ -108,6 +108,8 @@ Anything that speaks LSP — JetBrains (via the LSP plugin), Sublime (LSP packag
 TOAD is MIT-licensed and early. The compiler, runtime, language features, and docs are all fair game.
 
 - [Star it on GitHub](https://github.com/ZubeidHendricks/toad)
+- [Read CONTRIBUTING.md](https://github.com/ZubeidHendricks/toad/blob/main/CONTRIBUTING.md) — setup, the gate, and common tasks
+- [Good first issues](https://github.com/ZubeidHendricks/toad/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 - [Open an issue](https://github.com/ZubeidHendricks/toad/issues/new)
 - [Read the release notes](/blog/)
 
