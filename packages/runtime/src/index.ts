@@ -9,6 +9,9 @@ export const RUNTIME_VERSION = "0.6.0";
 export { defineTool, type ToolDef, type ToolRunContext } from "./tool.js";
 export {
   extendChain,
+  encodeDelegationHeader,
+  parseDelegationHeader,
+  DELEGATION_HEADER,
   type DelegationContext,
   type Principal,
   type ToolCallRequest,

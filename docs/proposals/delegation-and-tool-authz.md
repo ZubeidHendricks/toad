@@ -1,14 +1,15 @@
 # Proposal: delegation chains & deny-capable tool authorization
 
-**Status: Stages 1–2 implemented (`toad-runtime`, unreleased) · Stages 3–4
+**Status: Stages 1–3 implemented (`toad-runtime`, unreleased) · Stage 4
 proposed · June 2026**
 
 > Implemented so far: `DelegationContext`/`Principal` propagation through
-> `RunOptions` → `asTool` → `ToolRunContext`, and the deny-capable
-> `authorizeToolCall` hook with `AuthorizationError`. Still proposed: the
-> `serveMcp` boundary header (stage 3) and optional JWS signing / declarative
-> `.agent` `allow:` block (stage 4). The design below is the full picture; §9
-> tracks what has landed.
+> `RunOptions` → `asTool` → `ToolRunContext`; the deny-capable
+> `authorizeToolCall` hook with `AuthorizationError`; and the `serveMcp`
+> boundary — it accepts an inbound chain (structured or `Toad-Delegation`
+> header) and extends it by the served agent. Still proposed: optional JWS
+> signing and a declarative `.agent` `allow:` block (stage 4). The design below
+> is the full picture; §9 tracks what has landed.
 
 A design for defending TOAD's multi-agent composition against the **confused
 deputy**: an agent with legitimate authority tricked into using it for a request
@@ -257,18 +258,22 @@ the bearer.
 The chain is only as useful as its reach across process boundaries. Two
 boundaries matter, both of which TOAD already owns:
 
-- **`serveMcp` (inbound + outbound).** When TOAD exposes agents as MCP tools
-  (`mcp.ts`), it should (a) **accept** an incoming delegation header and seed the
-  root context from it, and (b) **emit** the chain on outbound tool calls. A
-  proposed wire form, deliberately close to AuthBridge's intent:
+- **`serveMcp` (inbound).** ✅ When TOAD exposes agents as MCP tools (`mcp.ts`),
+  a `tools/call` may carry a delegation chain in its `_meta` under the key
+  `toad/delegation` — either the structured `DelegationContext` object or the
+  `Toad-Delegation` header string. `serveMcp` reads it, **extends it by the
+  served agent**, and runs the agent with that chain, so the agent's own tool
+  calls authorize against the full chain. The wire form (ids percent-encoded):
 
   ```
-  Toad-Delegation: subject=user:1234; chain=agent:A,agent:D; tenant=hospital-a
+  Toad-Delegation: subject=user%3A1234; chain=agent%3AA,agent%3AD
   ```
 
-  A gateway (Kagenti's MCP gateway, an Istio policy, an Envoy filter) can then
-  enforce on the header without trusting TOAD's in-process check — defense in
-  depth.
+  `encodeDelegationHeader` / `parseDelegationHeader` produce and parse it. A
+  gateway (Kagenti's MCP gateway, an Istio policy, an Envoy filter) sets it and
+  can _also_ enforce on it without trusting TOAD's in-process check — defense in
+  depth. **Outbound** emission (a TOAD agent acting as an MCP _client_) is future
+  work, alongside the optional signing in §7.
 
 - **Leaf tools calling external services.** A tool reads `ctx.delegation` and
   forwards it (or maps it to an OAuth2 token-exchange / RFC 8693 call). This is
@@ -336,13 +341,17 @@ Purely additive. Suggested sequencing:
    `AuthorizationError` + denied-result handling at the tool-call seam, with
    AND-merge across config and per-call hooks. Covered by `delegation.test.ts`,
    including the chain-wide confused-deputy scenario.
-3. **Boundary I/O** — _proposed._ `serveMcp` accept/emit the `Toad-Delegation`
-   header so a gateway can enforce/sign.
+3. **Boundary I/O** — ✅ **done (inbound).** `serveMcp` accepts a
+   `toad/delegation` chain from a `tools/call`'s `_meta` (structured or header
+   string) and extends it by the served agent; `encodeDelegationHeader` /
+   `parseDelegationHeader` are the codec. Outbound client emission is future
+   work.
 4. **Optional** — _proposed._ JWS signing; declarative `.agent` `allow:` block
    (separate SPEC bump).
 
-Stages 1–2 are the core confused-deputy fix and shipped as one self-contained,
-opt-in change to `toad-runtime`.
+Stages 1–2 are the core confused-deputy fix; stage 3 lets a gateway sit in front
+of `serveMcp` and have the served agent honor the chain — all opt-in and
+backward compatible.
 
 ## 10. Open questions
 

@@ -3,6 +3,8 @@ import { z } from "zod";
 import { createAgent } from "./agent.js";
 import type { LlmClient, LlmResponse } from "./client.js";
 import { createMcpHandler, serveMcp, type JsonRpcSuccess } from "./mcp.js";
+import { defineTool } from "./tool.js";
+import type { DelegationContext } from "./delegation.js";
 
 /** A client that replays a fixed script of responses, ignoring the request. */
 function scriptedClient(responses: LlmResponse[]): LlmClient {
@@ -173,6 +175,80 @@ describe("createMcpHandler", () => {
     const handler = createMcpHandler([echoAgent("a")]);
     const res = await handler.handle({ hello: "world" });
     expect((res as { error: { code: number } }).error.code).toBe(-32600);
+  });
+});
+
+describe("delegation across the MCP boundary", () => {
+  /** An agent that calls one tool and records the delegation chain it sees. */
+  function guardedAgent(name: string, seen: { value?: DelegationContext }) {
+    const peek = defineTool({
+      description: "peek",
+      input: z.object({}),
+      run: (_input, ctx) => {
+        seen.value = ctx?.delegation;
+        return "ok";
+      },
+    });
+    return createAgent({
+      name,
+      model: "m",
+      inputSchema: z.object({}),
+      tools: { peek },
+      prompt: () => "go",
+      client: scriptedClient([
+        {
+          stop_reason: "tool_use",
+          content: [{ type: "tool_use", id: "t1", name: "peek", input: {} }],
+        },
+        { stop_reason: "end_turn", content: [{ type: "text", text: "done" }] },
+      ]),
+    });
+  }
+
+  it("accepts a structured _meta chain and extends it by the served agent", async () => {
+    const seen: { value?: DelegationContext } = {};
+    const handler = createMcpHandler([guardedAgent("guarded", seen)]);
+    await handler.handle(
+      req("tools/call", {
+        name: "guarded",
+        arguments: {},
+        _meta: {
+          "toad/delegation": {
+            subject: { id: "user:1" },
+            chain: [{ id: "gateway" }, { id: "agent:client" }],
+          },
+        },
+      }),
+    );
+    expect(seen.value?.chain.map((p) => p.id)).toEqual([
+      "gateway",
+      "agent:client",
+      "agent:guarded",
+    ]);
+    expect(seen.value?.subject?.id).toBe("user:1");
+  });
+
+  it("accepts the Toad-Delegation header string form in _meta", async () => {
+    const seen: { value?: DelegationContext } = {};
+    const handler = createMcpHandler([guardedAgent("guarded", seen)]);
+    await handler.handle(
+      req("tools/call", {
+        name: "guarded",
+        arguments: {},
+        _meta: { "toad/delegation": "subject=user%3A1; chain=gateway" },
+      }),
+    );
+    expect(seen.value?.chain.map((p) => p.id)).toEqual([
+      "gateway",
+      "agent:guarded",
+    ]);
+  });
+
+  it("runs without a chain when no _meta is present (backward compatible)", async () => {
+    const seen: { value?: DelegationContext } = { value: { chain: [] } };
+    const handler = createMcpHandler([guardedAgent("guarded", seen)]);
+    await handler.handle(req("tools/call", { name: "guarded", arguments: {} }));
+    expect(seen.value).toBeUndefined();
   });
 });
 

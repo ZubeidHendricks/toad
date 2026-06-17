@@ -4,7 +4,12 @@ import { createAgent } from "./agent.js";
 import type { LlmClient, LlmResponse } from "./client.js";
 import { AuthorizationError } from "./errors.js";
 import { defineTool } from "./tool.js";
-import { extendChain, type DelegationContext } from "./delegation.js";
+import {
+  encodeDelegationHeader,
+  extendChain,
+  parseDelegationHeader,
+  type DelegationContext,
+} from "./delegation.js";
 
 /** Replays a fixed script of model responses, ignoring the request. */
 function scriptedClient(responses: LlmResponse[]): LlmClient {
@@ -32,6 +37,44 @@ describe("extendChain", () => {
     expect(next.chain.map((p) => p.id)).toEqual(["agent:a", "agent:b"]);
     expect(next.subject).toEqual({ id: "user:1" });
     expect(base.chain).toHaveLength(1); // unchanged
+  });
+});
+
+describe("Toad-Delegation header codec", () => {
+  it("round-trips subject + chain", () => {
+    const ctx: DelegationContext = {
+      subject: { id: "user:1234" },
+      chain: [{ id: "agent:a" }, { id: "agent:b" }],
+    };
+    const header = encodeDelegationHeader(ctx);
+    expect(header).toBe("subject=user%3A1234; chain=agent%3Aa,agent%3Ab");
+    const back = parseDelegationHeader(header);
+    expect(back?.subject?.id).toBe("user:1234");
+    expect(back?.chain.map((p) => p.id)).toEqual(["agent:a", "agent:b"]);
+  });
+
+  it("encodes a chain with no subject", () => {
+    const header = encodeDelegationHeader({ chain: [{ id: "agent:a" }] });
+    expect(header).toBe("chain=agent%3Aa");
+    expect(parseDelegationHeader(header)?.chain.map((p) => p.id)).toEqual([
+      "agent:a",
+    ]);
+  });
+
+  it("percent-encodes ids that would break the grammar", () => {
+    const header = encodeDelegationHeader({ chain: [{ id: "a,b; c=d" }] });
+    expect(parseDelegationHeader(header)?.chain[0]!.id).toBe("a,b; c=d");
+  });
+
+  it("ignores an empty or unparseable header", () => {
+    expect(parseDelegationHeader("")).toBeUndefined();
+    expect(parseDelegationHeader("garbage")).toBeUndefined();
+    expect(parseDelegationHeader("chain=")).toBeUndefined();
+  });
+
+  it("tolerates whitespace and unknown segments", () => {
+    const ctx = parseDelegationHeader(" chain = agent%3Aa ; foo=bar ");
+    expect(ctx?.chain.map((p) => p.id)).toEqual(["agent:a"]);
   });
 });
 

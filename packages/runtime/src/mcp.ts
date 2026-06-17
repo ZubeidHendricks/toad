@@ -15,6 +15,14 @@ import { z, type ZodType } from "zod";
 import { encode as toonEncode } from "@toon-format/toon";
 import type { Agent } from "./agent.js";
 import { RUNTIME_VERSION } from "./index.js";
+import {
+  extendChain,
+  parseDelegationHeader,
+  type DelegationContext,
+} from "./delegation.js";
+
+/** MCP `_meta` key under which a delegation chain rides on a `tools/call`. */
+const DELEGATION_META_KEY = "toad/delegation";
 
 /** The latest MCP protocol version this server implements. */
 const PROTOCOL_VERSION = "2025-06-18";
@@ -80,7 +88,7 @@ interface McpTool {
 interface Servable {
   description: string;
   input: ZodType<unknown>;
-  run: (input: unknown) => Promise<unknown>;
+  run: (input: unknown, delegation?: DelegationContext) => Promise<unknown>;
 }
 
 function normalize(agents: McpAgents): Map<string, Servable> {
@@ -96,10 +104,38 @@ function normalize(agents: McpAgents): Map<string, Servable> {
     map.set(name, {
       description: tool.description,
       input: tool.input as ZodType<unknown>,
-      run: (input) => agent.run(input),
+      run: (input, delegation) =>
+        agent.run(input, delegation ? { delegation } : undefined),
     });
   }
   return map;
+}
+
+/**
+ * Read an inbound delegation chain from a `tools/call`'s `_meta`, accepting
+ * either the structured object or the `Toad-Delegation` header string, then
+ * extend it by the served agent (this hop). A gateway in front sets it; the
+ * served agent honors it, so the agent's own tool calls authorize against the
+ * full chain. Absent ⇒ `undefined` (the run proceeds without a chain).
+ */
+function inboundDelegation(
+  meta: unknown,
+  toolName: string,
+): DelegationContext | undefined {
+  if (meta === null || typeof meta !== "object") return undefined;
+  const raw = (meta as Record<string, unknown>)[DELEGATION_META_KEY];
+  let ctx: DelegationContext | undefined;
+  if (typeof raw === "string") {
+    ctx = parseDelegationHeader(raw);
+  } else if (
+    raw !== null &&
+    typeof raw === "object" &&
+    Array.isArray((raw as DelegationContext).chain)
+  ) {
+    ctx = raw as DelegationContext;
+  }
+  if (ctx === undefined) return undefined;
+  return extendChain(ctx, { id: `agent:${toolName}` });
 }
 
 function jsonSchema(schema: ZodType<unknown>): Record<string, unknown> {
@@ -170,7 +206,11 @@ export function createMcpHandler(
   }));
 
   const callTool = async (id: JsonRpcRequest["id"], params: unknown) => {
-    const p = (params ?? {}) as { name?: unknown; arguments?: unknown };
+    const p = (params ?? {}) as {
+      name?: unknown;
+      arguments?: unknown;
+      _meta?: unknown;
+    };
     if (typeof p.name !== "string") {
       return fail(id, INVALID_PARAMS, "tools/call requires a string `name`");
     }
@@ -185,7 +225,8 @@ export function createMcpHandler(
       return ok(id, errorContent(`invalid input: ${parsed.error.message}`));
     }
     try {
-      const output = await servable.run(parsed.data);
+      const delegation = inboundDelegation(p._meta, p.name);
+      const output = await servable.run(parsed.data, delegation);
       const text = renderResult(output, resultFormat);
       const result: Record<string, unknown> = {
         content: [{ type: "text", text }],

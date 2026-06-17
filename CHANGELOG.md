@@ -17,6 +17,13 @@ is versioned separately in [`SPEC.md`](./SPEC.md).
   `DelegationContext`, `Principal`, `ToolCallRequest`, `extendChain`,
   `AuthorizationError`. Design & roadmap:
   [`docs/proposals/delegation-and-tool-authz.md`](./docs/proposals/delegation-and-tool-authz.md).
+- **MCP delegation boundary** (`toad-runtime/mcp`) — a `tools/call` may carry a
+  delegation chain in its `_meta` under `toad/delegation` (the structured
+  `DelegationContext`, or the `Toad-Delegation` header string). `serveMcp`
+  reads it, extends it by the served agent, and runs the agent with that chain —
+  so a gateway in front (e.g. Kagenti's MCP gateway) can set it and the agent's
+  own tool calls authorize against the full chain. New exports:
+  `encodeDelegationHeader`, `parseDelegationHeader`, `DELEGATION_HEADER`.
 
 ## 0.6.0
 

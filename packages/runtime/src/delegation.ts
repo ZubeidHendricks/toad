@@ -52,3 +52,59 @@ export function extendChain(
   if (ctx.subject !== undefined) next.subject = ctx.subject;
   return next;
 }
+
+/** The header name for carrying a delegation chain across a transport boundary. */
+export const DELEGATION_HEADER = "Toad-Delegation";
+
+/**
+ * Serialize a chain to the `Toad-Delegation` wire form, for crossing a process
+ * boundary (an HTTP gateway, an MCP `_meta` field): `subject=<id>;
+ * chain=<id>,<id>,…`. Ids are percent-encoded, so any character is safe. This
+ * carries identities only; scopes/claims need the structured object form (e.g.
+ * a JSON `_meta` value) for full fidelity.
+ */
+export function encodeDelegationHeader(ctx: DelegationContext): string {
+  const enc = (id: string): string => encodeURIComponent(id);
+  const parts: string[] = [];
+  if (ctx.subject !== undefined) parts.push(`subject=${enc(ctx.subject.id)}`);
+  parts.push(`chain=${ctx.chain.map((p) => enc(p.id)).join(",")}`);
+  return parts.join("; ");
+}
+
+/**
+ * Parse a `Toad-Delegation` header back into a chain. Returns `undefined` when
+ * nothing parseable is present (so an empty/garbage header is simply ignored).
+ * Tolerant of extra whitespace and unknown segments.
+ */
+export function parseDelegationHeader(
+  value: string,
+): DelegationContext | undefined {
+  const dec = (id: string): string => {
+    try {
+      return decodeURIComponent(id);
+    } catch {
+      return id;
+    }
+  };
+  let subject: Principal | undefined;
+  let chain: Principal[] = [];
+  for (const segment of value.split(";")) {
+    const eq = segment.indexOf("=");
+    if (eq === -1) continue;
+    const key = segment.slice(0, eq).trim();
+    const val = segment.slice(eq + 1).trim();
+    if (key === "subject") {
+      if (val !== "") subject = { id: dec(val) };
+    } else if (key === "chain") {
+      chain = val
+        .split(",")
+        .map((id) => id.trim())
+        .filter((id) => id !== "")
+        .map((id) => ({ id: dec(id) }));
+    }
+  }
+  if (subject === undefined && chain.length === 0) return undefined;
+  const ctx: DelegationContext = { chain };
+  if (subject !== undefined) ctx.subject = subject;
+  return ctx;
+}
