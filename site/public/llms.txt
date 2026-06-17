@@ -12,7 +12,7 @@ Key facts: two npm packages (`toad-compiler` with the `toac` CLI, and `toad-runt
 - [Prompt Templates](https://zubeidhendricks.github.io/toad/guide/templates.html): interpolation, loops, conditionals
 - [Write Agents with AI](https://zubeidhendricks.github.io/toad/guide/writing-with-ai.html): a copy-paste prompt that turns any LLM into a TOAD author
 - [The .agent Specification](https://zubeidhendricks.github.io/toad/reference/spec.html): the normative, versioned format spec
-- [CLI Reference](https://zubeidhendricks.github.io/toad/reference/cli.html): toac build / check / init, flags, exit codes
+- [CLI Reference](https://zubeidhendricks.github.io/toad/reference/cli.html): toac build / check / fmt / cost / init / lsp, flags, exit codes
 - [Runtime Reference](https://zubeidhendricks.github.io/toad/reference/runtime.html): createAgent, defineTool, hooks, TOON serialization
 
 ## Evidence
@@ -22,6 +22,6 @@ Key facts: two npm packages (`toad-compiler` with the `toac` CLI, and `toad-runt
 ## Optional
 
 - [Examples](https://zubeidhendricks.github.io/toad/examples.html): five agents with their exact compiled TypeScript
-- [Ecosystem](https://zubeidhendricks.github.io/toad/ecosystem.html): packages, what TOAD builds on, editor support
+- [Ecosystem](https://zubeidhendricks.github.io/toad/ecosystem.html): packages, what TOAD builds on, editor support (VS Code + `toac lsp` language server for Neovim/Helix/Zed/Emacs)
 - [Playground](https://zubeidhendricks.github.io/toad/playground.html): the real compiler running in the browser (interactive; not useful to fetch)
 - [Full docs as one file](https://zubeidhendricks.github.io/toad/llms-full.txt): all pages concatenated
