@@ -1,9 +1,16 @@
 import type { ZodType } from "zod";
+import type { DelegationContext } from "./delegation.js";
 
 /** Passed to a tool's `run` so long-running tools can cooperate with callers. */
 export interface ToolRunContext {
   /** Aborted when the caller cancels the run (`run(inputs, { signal })`). */
   signal?: AbortSignal;
+  /**
+   * The delegation chain in effect for this call, when the run was started with
+   * one. A leaf tool can forward it to an external service (a header, a token
+   * exchange); a sub-agent (`asTool`) extends it automatically.
+   */
+  delegation?: DelegationContext;
 }
 
 /**

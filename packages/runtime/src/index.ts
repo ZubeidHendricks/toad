@@ -8,6 +8,12 @@ export const RUNTIME_VERSION = "0.6.0";
 
 export { defineTool, type ToolDef, type ToolRunContext } from "./tool.js";
 export {
+  extendChain,
+  type DelegationContext,
+  type Principal,
+  type ToolCallRequest,
+} from "./delegation.js";
+export {
   createAgent,
   toonValue,
   type Agent,
@@ -21,7 +27,12 @@ export {
   type TokenUsage,
   type ToolResultEncoding,
 } from "./agent.js";
-export { MaxTurnsError, OutputParseError, ToolError } from "./errors.js";
+export {
+  AuthorizationError,
+  MaxTurnsError,
+  OutputParseError,
+  ToolError,
+} from "./errors.js";
 export {
   anthropicClient,
   type LlmBlock,
