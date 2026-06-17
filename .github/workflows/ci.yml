@@ -42,5 +42,8 @@ jobs:
       - name: Build packages
         run: pnpm build
 
+      - name: Smoke-test the language server (spawns the built toac lsp binary)
+        run: pnpm smoke:lsp
+
       - name: Build site (bundle compiler + VitePress)
         run: pnpm site:build
