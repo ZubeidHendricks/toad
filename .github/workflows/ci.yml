@@ -45,5 +45,8 @@ jobs:
       - name: Smoke-test the language server (spawns the built toac lsp binary)
         run: pnpm smoke:lsp
 
+      - name: Check the examples gallery is regenerated from the compiler
+        run: node scripts/gen-examples.mjs --check
+
       - name: Build site (bundle compiler + VitePress)
         run: pnpm site:build
