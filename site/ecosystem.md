@@ -32,7 +32,20 @@ npm i toad-runtime @anthropic-ai/sdk
 
 ## Editor support
 
-The **[TOAD Agent VS Code extension](https://github.com/ZubeidHendricks/toad/tree/main/editors/vscode)** gives `.agent` files full syntax highlighting — keys, `[N]` length markers, tabular headers, types, and the whole template language (`{#each}`, `{#if}`, interpolation). Until it's on the marketplace, install from source:
+`.agent` files get the same diagnostics, hovers, completions, and formatting in
+every editor, because they all run the **real compiler** — the one behind
+`toac`. There's no second implementation to drift.
+
+### VS Code
+
+The **[TOAD Agent extension](https://github.com/ZubeidHendricks/toad/tree/main/editors/vscode)** bundles the compiler directly and gives `.agent` files:
+
+- **Syntax highlighting** — keys, `[N]` length markers, tabular headers, types, and the whole template language (`{#each}`, `{#if}`, interpolation).
+- **Live diagnostics** — the exact errors `toac check` reports, with carets on the offending span, as you type.
+- **Hovers & completions** — docs for every top-level key and template construct, plus your declared `inputs.*` names.
+- **Format on save** — `toac fmt`'s canonical formatter as a document formatter.
+
+Until it's on the marketplace, install from source:
 
 ```bash
 cd editors/vscode
@@ -40,7 +53,55 @@ npx @vscode/vsce package
 code --install-extension toad-agent-0.1.0.vsix
 ```
 
-The same TextMate grammar powers the code blocks on this site. In-editor diagnostics from `toac check` are on the roadmap — [issues and PRs welcome](https://github.com/ZubeidHendricks/toad/issues).
+The same TextMate grammar powers the code blocks on this site.
+
+### Every other editor — the language server
+
+`toac lsp` is a standalone [Language Server](https://microsoft.github.io/language-server-protocol/) over stdio: the same diagnostics, hovers, completions, and formatting, for any LSP-capable editor. Install the compiler globally (`npm i -g toad-compiler`) so `toac` is on your `PATH`, then point your editor at `toac lsp` for the `agent` language (files ending in `.agent`).
+
+**Neovim** (with [`nvim-lspconfig`](https://github.com/neovim/nvim-lspconfig) or the built-in API):
+
+```lua
+vim.filetype.add({ extension = { agent = "agent" } })
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "agent",
+  callback = function(args)
+    vim.lsp.start({
+      name = "toad",
+      cmd = { "toac", "lsp" },
+      root_dir = vim.fs.dirname(args.file),
+    })
+  end,
+})
+```
+
+**Helix** (`~/.config/helix/languages.toml`):
+
+```toml
+[[language]]
+name = "agent"
+scope = "source.agent"
+file-types = ["agent"]
+roots = []
+language-servers = ["toad"]
+auto-format = true
+
+[language-server.toad]
+command = "toac"
+args = ["lsp"]
+```
+
+**Zed** (`~/.config/zed/settings.json`) — register `toac lsp` as a language server and map the `agent` extension to it.
+
+**Emacs** ([Eglot](https://github.com/joaotavora/eglot)):
+
+```elisp
+(add-to-list 'auto-mode-alist '("\\.agent\\'" . prog-mode))
+(with-eval-after-load 'eglot
+  (add-to-list 'eglot-server-programs '(prog-mode "toac" "lsp")))
+```
+
+Anything that speaks LSP — JetBrains (via the LSP plugin), Sublime (LSP package), Kakoune (kak-lsp) — works the same way: run `toac lsp`, associate `.agent`.
 
 ## Contributing
 

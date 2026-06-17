@@ -61,6 +61,6 @@ TOAD's legitimacy flows from TOON's. Being the canonical "agents" entry in their
 
 - [ ] One blog post per release, every release — dead blogs read as dead projects
 - [ ] Grow `site/examples.md` toward 15–20 agents covering real use cases (the gallery is the SEO surface)
-- [ ] In-editor diagnostics (`toac check` → LSP) — the roadmap item people will ask for first
+- [x] In-editor diagnostics (`toac check` → LSP) — shipped as `toac lsp`, a standalone Language Server reusing the compiler front-end; diagnostics/hover/completion/formatting in any LSP editor (Neovim, Helix, Zed, Emacs, JetBrains). Setup per editor in `site/ecosystem.md`
 - [ ] Integrations where agents already live: a Claude Code skill that authors `.agent` files; ~~an MCP server exposing compiled agents as tools~~ — shipped as `serveMcp` in `toad-runtime/mcp`
 - [ ] Track the two numbers that define "standard": weekly npm downloads and `.agent` files visible in GitHub code search — review monthly

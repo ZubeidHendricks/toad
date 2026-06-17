@@ -21,7 +21,7 @@ const consoleLogger: Logger = {
 };
 
 const USAGE =
-  "usage: toac <build|check> <paths...> [--outDir <dir>] | toac fmt [--check] <paths...> | toac cost [--json] <paths...> | toac init <name>";
+  "usage: toac <build|check> <paths...> [--outDir <dir>] | toac fmt [--check] <paths...> | toac cost [--json] <paths...> | toac init <name> | toac lsp";
 
 // Starter files for `toac init <name>`: a minimal tool-using agent plus the
 // co-located tools module the generated import expects.
@@ -76,6 +76,13 @@ export async function run(
   }
   if (command === "cost") {
     return cost(rest, logger);
+  }
+  if (command === "lsp") {
+    // Start a Language Server over stdio. Loaded lazily so the rest of the CLI
+    // (and the browser bundle, which never imports this) stay free of it.
+    const { runLanguageServer } = await import("./lsp.js");
+    await runLanguageServer();
+    return 0;
   }
   if (command !== "build" && command !== "check") {
     logger.error(USAGE);
