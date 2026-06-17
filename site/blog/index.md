@@ -2,6 +2,40 @@
 
 What's new in TOAD. Follow along on [GitHub releases](https://github.com/ZubeidHendricks/toad/releases).
 
+## TOAD 0.7.0 — the security release {#v0-7-0}
+
+_June 18, 2026_
+
+Multi-agent systems have a sharp edge: the **confused deputy**. An agent with
+legitimate authority gets tricked into using it for a request that shouldn't
+have it — a sub-agent reads patient records because a token rode along in the
+context, and the audit trail shows nothing but "authorized activity." You can't
+fix this by securing the call path, because the whole point of an agent is that
+it decides the next call. So TOAD secures the **identity** instead.
+
+- **Delegation chains** — seed a `RunOptions.delegation` (the originating user
+  plus the acting agents). It flows into every tool via `ToolRunContext` and
+  extends by one hop through each `uses:` / `asTool()` sub-agent, automatically.
+- **Deny-capable authorization** — a new `authorizeToolCall` hook sees the
+  **full chain** and can block a call before the tool runs (`false` denies one
+  call; throwing `AuthorizationError` aborts the run). So a sub-agent can be
+  barred from a resource _regardless_ of a token it inherited through the
+  context — authorization is against the identity chain, not a path.
+- **MCP boundary** — `serveMcp` accepts an inbound chain (a `Toad-Delegation`
+  header or structured `_meta`) and honors it, so a gateway out front (e.g.
+  [Kagenti](https://github.com/kagenti/kagenti)) can set the chain and TOAD
+  enforces it at the tool boundary. TOAD produces the identity; your platform
+  enforces it.
+
+Everything is **opt-in and backward compatible** — set no `delegation` and no
+`authorizeToolCall`, and nothing changes. Design and roadmap (including optional
+signing and a declarative `.agent` `allow:` block) are in
+[the proposal](https://github.com/ZubeidHendricks/toad/blob/main/docs/proposals/delegation-and-tool-authz.md).
+
+```bash
+npm i toad-runtime@0.7.0
+```
+
 ## TOAD 0.6.0 — diagnostics in every editor {#v0-6-0}
 
 _June 17, 2026_

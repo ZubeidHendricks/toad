@@ -3,7 +3,10 @@
 All notable changes to `toad-compiler` and `toad-runtime`. The `.agent` format
 is versioned separately in [`SPEC.md`](./SPEC.md).
 
-## Unreleased
+## 0.7.0
+
+The security release: a framework-level defense against the multi-agent
+confused deputy.
 
 - **Delegation chains & tool authorization** (`toad-runtime`) — a
   framework-level defense against the multi-agent _confused deputy_. Seed a

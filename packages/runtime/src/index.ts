@@ -4,7 +4,7 @@
  * See `_bmad-output/architecture.md` §6.
  */
 
-export const RUNTIME_VERSION = "0.6.0";
+export const RUNTIME_VERSION = "0.7.0";
 
 export { defineTool, type ToolDef, type ToolRunContext } from "./tool.js";
 export {
