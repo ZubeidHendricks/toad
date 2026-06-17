@@ -64,7 +64,7 @@ export default researcher;
 
 :::
 
-[Open in playground →](/playground#a=YWdlbnQ6IHJlc2VhcmNoZXIKbW9kZWw6IGNsYXVkZS1vcHVzLTQtNwpkZXNjcmlwdGlvbjogUmVzZWFyY2ggYSB0b3BpYyBhbmQgcmV0dXJuIGEgc291cmNlZCBzdW1tYXJ5LgppbnB1dHNbMV17bmFtZSx0eXBlfToKICB0b3BpYyxzdHJpbmcKdG9vbHNbMl06IHdlYl9zZWFyY2gsZmV0Y2hfcGFnZQpwcm9tcHQ6IHwKICBZb3UgYXJlIGEgcmVzZWFyY2ggYW5hbHlzdC4gUmVzZWFyY2g6IHtpbnB1dHMudG9waWN9CiAgVXNlIHdlYl9zZWFyY2ggdG8gZmluZCBzb3VyY2VzLCB0aGVuIGZldGNoX3BhZ2UgdG8gcmVhZCB0aGVtLgogIFJldHVybiBhIGNpdGVkIHN1bW1hcnkuCm91dHB1dHNbMl17bmFtZSx0eXBlfToKICBzdW1tYXJ5LHN0cmluZwogIHNvdXJjZXMsc3RyaW5nW10)
+[Open in playground →](/playground#a=YWdlbnQ6IHJlc2VhcmNoZXIKbW9kZWw6IGNsYXVkZS1vcHVzLTQtNwpkZXNjcmlwdGlvbjogUmVzZWFyY2ggYSB0b3BpYyBhbmQgcmV0dXJuIGEgc291cmNlZCBzdW1tYXJ5LgppbnB1dHNbMV17bmFtZSx0eXBlfToKICB0b3BpYyxzdHJpbmcKdG9vbHNbMl06IHdlYl9zZWFyY2gsZmV0Y2hfcGFnZQpwcm9tcHQ6IHwKICBZb3UgYXJlIGEgcmVzZWFyY2ggYW5hbHlzdC4gUmVzZWFyY2g6IHtpbnB1dHMudG9waWN9CiAgVXNlIHdlYl9zZWFyY2ggdG8gZmluZCBzb3VyY2VzLCB0aGVuIGZldGNoX3BhZ2UgdG8gcmVhZCB0aGVtLgogIFJldHVybiBhIGNpdGVkIHN1bW1hcnkuCm91dHB1dHNbMl17bmFtZSx0eXBlfToKICBzdW1tYXJ5LHN0cmluZwogIHNvdXJjZXMsc3RyaW5nW10K)
 
 ## summarizer — typed array output
 
@@ -120,7 +120,7 @@ export default summarizer;
 
 :::
 
-[Open in playground →](/playground#a=YWdlbnQ6IHN1bW1hcml6ZXIKbW9kZWw6IGNsYXVkZS1vcHVzLTQtNwpkZXNjcmlwdGlvbjogU3VtbWFyaXplIHRleHQgaW50byBrZXkgYnVsbGV0IHBvaW50cy4KaW5wdXRzWzFde25hbWUsdHlwZX06CiAgdGV4dCxzdHJpbmcKcHJvbXB0OiB8CiAgU3VtbWFyaXplIHRoZSBmb2xsb3dpbmcgaW50byAzLTUgY29uY2lzZSBidWxsZXQgcG9pbnRzOgogIHtpbnB1dHMudGV4dH0Kb3V0cHV0c1sxXXtuYW1lLHR5cGV9OgogIGJ1bGxldHMsc3RyaW5nW10)
+[Open in playground →](/playground#a=YWdlbnQ6IHN1bW1hcml6ZXIKbW9kZWw6IGNsYXVkZS1vcHVzLTQtNwpkZXNjcmlwdGlvbjogU3VtbWFyaXplIHRleHQgaW50byBrZXkgYnVsbGV0IHBvaW50cy4KaW5wdXRzWzFde25hbWUsdHlwZX06CiAgdGV4dCxzdHJpbmcKcHJvbXB0OiB8CiAgU3VtbWFyaXplIHRoZSBmb2xsb3dpbmcgaW50byAzLTUgY29uY2lzZSBidWxsZXQgcG9pbnRzOgogIHtpbnB1dHMudGV4dH0Kb3V0cHV0c1sxXXtuYW1lLHR5cGV9OgogIGJ1bGxldHMsc3RyaW5nW10K)
 
 ## digest — `{#each}` loop with index
 
@@ -179,7 +179,7 @@ export default digest;
 
 :::
 
-[Open in playground →](/playground#a=YWdlbnQ6IGRpZ2VzdAptb2RlbDogY2xhdWRlLW9wdXMtNC03CmRlc2NyaXB0aW9uOiBUdXJuIGEgbGlzdCBvZiBub3RlcyBpbnRvIGEgc2hvcnQgc3VtbWFyeS4KaW5wdXRzWzFde25hbWUsdHlwZX06CiAgbm90ZXMsc3RyaW5nW10KcHJvbXB0OiB8CiAgU3VtbWFyaXplIHRoZXNlIG5vdGVzIGludG8gYSBzaG9ydCBwYXJhZ3JhcGg6CiAgeyNlYWNoIGlucHV0cy5ub3RlcyBhcyBub3RlLCBpfQogIHtpfS4ge25vdGV9CiAgey9lYWNofQpvdXRwdXRzWzFde25hbWUsdHlwZX06CiAgc3VtbWFyeSxzdHJpbmc)
+[Open in playground →](/playground#a=YWdlbnQ6IGRpZ2VzdAptb2RlbDogY2xhdWRlLW9wdXMtNC03CmRlc2NyaXB0aW9uOiBUdXJuIGEgbGlzdCBvZiBub3RlcyBpbnRvIGEgc2hvcnQgc3VtbWFyeS4KaW5wdXRzWzFde25hbWUsdHlwZX06CiAgbm90ZXMsc3RyaW5nW10KcHJvbXB0OiB8CiAgU3VtbWFyaXplIHRoZXNlIG5vdGVzIGludG8gYSBzaG9ydCBwYXJhZ3JhcGg6CiAgeyNlYWNoIGlucHV0cy5ub3RlcyBhcyBub3RlLCBpfQogIHtpfS4ge25vdGV9CiAgey9lYWNofQpvdXRwdXRzWzFde25hbWUsdHlwZX06CiAgc3VtbWFyeSxzdHJpbmcK)
 
 ## report — `{#each}` + `{#if}` conditional
 
@@ -248,7 +248,7 @@ export default report;
 
 :::
 
-[Open in playground →](/playground#a=YWdlbnQ6IHJlcG9ydAptb2RlbDogY2xhdWRlLW9wdXMtNC03CmRlc2NyaXB0aW9uOiBXcml0ZSBhIHJlcG9ydCBmcm9tIGZpbmRpbmdzLCBvcHRpb25hbGx5IGRldGFpbGVkLgppbnB1dHNbMl17bmFtZSx0eXBlfToKICBmaW5kaW5ncyxzdHJpbmdbXQogIGRldGFpbGVkLGJvb2xlYW4KcHJvbXB0OiB8CiAgV3JpdGUgYSByZXBvcnQgZnJvbSB0aGVzZSBmaW5kaW5nczoKICB7I2VhY2ggaW5wdXRzLmZpbmRpbmdzIGFzIGZ9CiAgLSB7Zn0KICB7L2VhY2h9CiAgeyNpZiBpbnB1dHMuZGV0YWlsZWR9CiAgSW5jbHVkZSBhIHRob3JvdWdoIGFuYWx5c2lzIHNlY3Rpb24uCiAgezplbHNlfQogIEtlZXAgaXQgdG8gYSBzaW5nbGUgcGFyYWdyYXBoLgogIHsvaWZ9Cm91dHB1dHNbMV17bmFtZSx0eXBlfToKICByZXBvcnQsc3RyaW5n)
+[Open in playground →](/playground#a=YWdlbnQ6IHJlcG9ydAptb2RlbDogY2xhdWRlLW9wdXMtNC03CmRlc2NyaXB0aW9uOiBXcml0ZSBhIHJlcG9ydCBmcm9tIGZpbmRpbmdzLCBvcHRpb25hbGx5IGRldGFpbGVkLgppbnB1dHNbMl17bmFtZSx0eXBlfToKICBmaW5kaW5ncyxzdHJpbmdbXQogIGRldGFpbGVkLGJvb2xlYW4KcHJvbXB0OiB8CiAgV3JpdGUgYSByZXBvcnQgZnJvbSB0aGVzZSBmaW5kaW5nczoKICB7I2VhY2ggaW5wdXRzLmZpbmRpbmdzIGFzIGZ9CiAgLSB7Zn0KICB7L2VhY2h9CiAgeyNpZiBpbnB1dHMuZGV0YWlsZWR9CiAgSW5jbHVkZSBhIHRob3JvdWdoIGFuYWx5c2lzIHNlY3Rpb24uCiAgezplbHNlfQogIEtlZXAgaXQgdG8gYSBzaW5nbGUgcGFyYWdyYXBoLgogIHsvaWZ9Cm91dHB1dHNbMV17bmFtZSx0eXBlfToKICByZXBvcnQsc3RyaW5nCg)
 
 ## brief — object types, destructuring, kitchen sink
 
@@ -323,7 +323,842 @@ export default brief;
 
 :::
 
-[Open in playground →](/playground#a=YWdlbnQ6IGJyaWVmCm1vZGVsOiBjbGF1ZGUtb3B1cy00LTcKZGVzY3JpcHRpb246IFN1bW1hcml6ZSBzb3VyY2VzIGZvciBhbiBhdWRpZW5jZSwgb3B0aW9uYWxseSBpbiBkZXRhaWwuCmlucHV0c1szXXtuYW1lLHR5cGV9OgogIHNvdXJjZXMsInt0aXRsZTpzdHJpbmc7dXJsOnN0cmluZ31bXSIKICBkZXRhaWxlZCxib29sZWFuCiAgYXVkaWVuY2Usc3RyaW5nCnByb21wdDogfAogIFdyaXRlIGEgYnJpZWYgZm9yIHtpbnB1dHMuYXVkaWVuY2V9LgogIHsjZWFjaCBpbnB1dHMuc291cmNlcyBhcyB7dGl0bGUsIHVybH0sIGl9CiAge2l9LiB7dGl0bGV9IOKAlCB7dXJsfQogIHs6ZWxzZX0KICBObyBzb3VyY2VzIHByb3ZpZGVkLgogIHsvZWFjaH0KICB7I2lmIGlucHV0cy5kZXRhaWxlZH0KICBJbmNsdWRlIGEgdGhvcm91Z2ggYW5hbHlzaXMgc2VjdGlvbi4KICB7OmVsc2V9CiAgS2VlcCBpdCB0byBhIHNpbmdsZSBwYXJhZ3JhcGguCiAgey9pZn0Kb3V0cHV0c1sxXXtuYW1lLHR5cGV9OgogIGJyaWVmLHN0cmluZw)
+[Open in playground →](/playground#a=YWdlbnQ6IGJyaWVmCm1vZGVsOiBjbGF1ZGUtb3B1cy00LTcKZGVzY3JpcHRpb246IFN1bW1hcml6ZSBzb3VyY2VzIGZvciBhbiBhdWRpZW5jZSwgb3B0aW9uYWxseSBpbiBkZXRhaWwuCmlucHV0c1szXXtuYW1lLHR5cGV9OgogIHNvdXJjZXMsInt0aXRsZTpzdHJpbmc7dXJsOnN0cmluZ31bXSIKICBkZXRhaWxlZCxib29sZWFuCiAgYXVkaWVuY2Usc3RyaW5nCnByb21wdDogfAogIFdyaXRlIGEgYnJpZWYgZm9yIHtpbnB1dHMuYXVkaWVuY2V9LgogIHsjZWFjaCBpbnB1dHMuc291cmNlcyBhcyB7dGl0bGUsIHVybH0sIGl9CiAge2l9LiB7dGl0bGV9IOKAlCB7dXJsfQogIHs6ZWxzZX0KICBObyBzb3VyY2VzIHByb3ZpZGVkLgogIHsvZWFjaH0KICB7I2lmIGlucHV0cy5kZXRhaWxlZH0KICBJbmNsdWRlIGEgdGhvcm91Z2ggYW5hbHlzaXMgc2VjdGlvbi4KICB7OmVsc2V9CiAgS2VlcCBpdCB0byBhIHNpbmdsZSBwYXJhZ3JhcGguCiAgey9pZn0Kb3V0cHV0c1sxXXtuYW1lLHR5cGV9OgogIGJyaWVmLHN0cmluZwo)
+
+## classifier — enum output (a closed set of labels)
+
+::: code-group
+
+```agent [classifier.agent]
+agent: classifier
+model: claude-opus-4-7
+description: Classify a support message by intent.
+inputs[1]{name,type}:
+  message,string
+prompt: |
+  Classify this customer message by intent:
+  {inputs.message}
+outputs[2]{name,type}:
+  intent,billing|technical|sales|other
+  confidence,number
+```
+
+```ts [classifier.ts (generated)]
+// Generated by toac from classifier.agent — do not edit.
+import { createAgent, type Agent } from "toad-runtime";
+import { z } from "zod";
+
+export interface ClassifierInput {
+  message: string;
+}
+
+export interface ClassifierOutput {
+  intent: "billing" | "technical" | "sales" | "other";
+  confidence: number;
+}
+
+const inputSchema = z.object({
+  message: z.string(),
+});
+
+const outputSchema = z.object({
+  intent: z.enum(["billing", "technical", "sales", "other"]),
+  confidence: z.number(),
+});
+
+export const classifier: Agent<ClassifierInput, ClassifierOutput> = createAgent({
+  name: "classifier",
+  model: "claude-opus-4-7",
+  description: "Classify a support message by intent.",
+  inputSchema,
+  outputSchema,
+  prompt: (inputs: ClassifierInput) =>
+    `Classify this customer message by intent:
+${inputs.message}`,
+});
+
+export default classifier;
+```
+
+:::
+
+[Open in playground →](/playground#a=YWdlbnQ6IGNsYXNzaWZpZXIKbW9kZWw6IGNsYXVkZS1vcHVzLTQtNwpkZXNjcmlwdGlvbjogQ2xhc3NpZnkgYSBzdXBwb3J0IG1lc3NhZ2UgYnkgaW50ZW50LgppbnB1dHNbMV17bmFtZSx0eXBlfToKICBtZXNzYWdlLHN0cmluZwpwcm9tcHQ6IHwKICBDbGFzc2lmeSB0aGlzIGN1c3RvbWVyIG1lc3NhZ2UgYnkgaW50ZW50OgogIHtpbnB1dHMubWVzc2FnZX0Kb3V0cHV0c1syXXtuYW1lLHR5cGV9OgogIGludGVudCxiaWxsaW5nfHRlY2huaWNhbHxzYWxlc3xvdGhlcgogIGNvbmZpZGVuY2UsbnVtYmVyCg)
+
+## translator — minimal interpolation
+
+::: code-group
+
+```agent [translator.agent]
+agent: translator
+model: claude-opus-4-7
+description: Translate text into a target language.
+inputs[2]{name,type}:
+  text,string
+  target,string
+prompt: |
+  Translate the following into {inputs.target}. Return only the translation.
+  {inputs.text}
+outputs[1]{name,type}:
+  translation,string
+```
+
+```ts [translator.ts (generated)]
+// Generated by toac from translator.agent — do not edit.
+import { createAgent, type Agent } from "toad-runtime";
+import { z } from "zod";
+
+export interface TranslatorInput {
+  text: string;
+  target: string;
+}
+
+export interface TranslatorOutput {
+  translation: string;
+}
+
+const inputSchema = z.object({
+  text: z.string(),
+  target: z.string(),
+});
+
+const outputSchema = z.object({
+  translation: z.string(),
+});
+
+export const translator: Agent<TranslatorInput, TranslatorOutput> = createAgent({
+  name: "translator",
+  model: "claude-opus-4-7",
+  description: "Translate text into a target language.",
+  inputSchema,
+  outputSchema,
+  prompt: (inputs: TranslatorInput) =>
+    `Translate the following into ${inputs.target}. Return only the translation.
+${inputs.text}`,
+});
+
+export default translator;
+```
+
+:::
+
+[Open in playground →](/playground#a=YWdlbnQ6IHRyYW5zbGF0b3IKbW9kZWw6IGNsYXVkZS1vcHVzLTQtNwpkZXNjcmlwdGlvbjogVHJhbnNsYXRlIHRleHQgaW50byBhIHRhcmdldCBsYW5ndWFnZS4KaW5wdXRzWzJde25hbWUsdHlwZX06CiAgdGV4dCxzdHJpbmcKICB0YXJnZXQsc3RyaW5nCnByb21wdDogfAogIFRyYW5zbGF0ZSB0aGUgZm9sbG93aW5nIGludG8ge2lucHV0cy50YXJnZXR9LiBSZXR1cm4gb25seSB0aGUgdHJhbnNsYXRpb24uCiAge2lucHV0cy50ZXh0fQpvdXRwdXRzWzFde25hbWUsdHlwZX06CiAgdHJhbnNsYXRpb24sc3RyaW5nCg)
+
+## sql-generator — schema in, query + explanation out
+
+::: code-group
+
+```agent [sql-generator.agent]
+agent: sql_generator
+model: claude-opus-4-7
+description: Turn a question into SQL against a given schema.
+inputs[2]{name,type}:
+  question,string
+  schema,string
+prompt: |
+  Given this database schema:
+  {inputs.schema}
+
+  Write a single SQL query that answers: {inputs.question}
+outputs[2]{name,type}:
+  sql,string
+  explanation,string
+```
+
+```ts [sql-generator.ts (generated)]
+// Generated by toac from sql_generator.agent — do not edit.
+import { createAgent, type Agent } from "toad-runtime";
+import { z } from "zod";
+
+export interface SqlGeneratorInput {
+  question: string;
+  schema: string;
+}
+
+export interface SqlGeneratorOutput {
+  sql: string;
+  explanation: string;
+}
+
+const inputSchema = z.object({
+  question: z.string(),
+  schema: z.string(),
+});
+
+const outputSchema = z.object({
+  sql: z.string(),
+  explanation: z.string(),
+});
+
+export const sql_generator: Agent<SqlGeneratorInput, SqlGeneratorOutput> = createAgent({
+  name: "sql_generator",
+  model: "claude-opus-4-7",
+  description: "Turn a question into SQL against a given schema.",
+  inputSchema,
+  outputSchema,
+  prompt: (inputs: SqlGeneratorInput) =>
+    `Given this database schema:
+${inputs.schema}
+
+Write a single SQL query that answers: ${inputs.question}`,
+});
+
+export default sql_generator;
+```
+
+:::
+
+[Open in playground →](/playground#a=YWdlbnQ6IHNxbF9nZW5lcmF0b3IKbW9kZWw6IGNsYXVkZS1vcHVzLTQtNwpkZXNjcmlwdGlvbjogVHVybiBhIHF1ZXN0aW9uIGludG8gU1FMIGFnYWluc3QgYSBnaXZlbiBzY2hlbWEuCmlucHV0c1syXXtuYW1lLHR5cGV9OgogIHF1ZXN0aW9uLHN0cmluZwogIHNjaGVtYSxzdHJpbmcKcHJvbXB0OiB8CiAgR2l2ZW4gdGhpcyBkYXRhYmFzZSBzY2hlbWE6CiAge2lucHV0cy5zY2hlbWF9CgogIFdyaXRlIGEgc2luZ2xlIFNRTCBxdWVyeSB0aGF0IGFuc3dlcnM6IHtpbnB1dHMucXVlc3Rpb259Cm91dHB1dHNbMl17bmFtZSx0eXBlfToKICBzcWwsc3RyaW5nCiAgZXhwbGFuYXRpb24sc3RyaW5nCg)
+
+## code-reviewer — array of objects with an enum field
+
+::: code-group
+
+```agent [code-reviewer.agent]
+agent: code_reviewer
+model: claude-opus-4-7
+description: Review a diff and return structured findings.
+inputs[2]{name,type}:
+  diff,string
+  language,string
+prompt: |
+  Review this {inputs.language} diff for bugs, style, and clarity:
+  {inputs.diff}
+
+  Return one finding per issue.
+outputs[1]{name,type}:
+  findings,"{line:number;severity:low|medium|high;message:string}[]"
+```
+
+```ts [code-reviewer.ts (generated)]
+// Generated by toac from code_reviewer.agent — do not edit.
+import { createAgent, type Agent } from "toad-runtime";
+import { z } from "zod";
+
+export interface CodeReviewerInput {
+  diff: string;
+  language: string;
+}
+
+export interface CodeReviewerOutput {
+  findings: { line: number; severity: "low" | "medium" | "high"; message: string }[];
+}
+
+const inputSchema = z.object({
+  diff: z.string(),
+  language: z.string(),
+});
+
+const outputSchema = z.object({
+  findings: z.array(z.object({ line: z.number(), severity: z.enum(["low", "medium", "high"]), message: z.string() })),
+});
+
+export const code_reviewer: Agent<CodeReviewerInput, CodeReviewerOutput> = createAgent({
+  name: "code_reviewer",
+  model: "claude-opus-4-7",
+  description: "Review a diff and return structured findings.",
+  inputSchema,
+  outputSchema,
+  prompt: (inputs: CodeReviewerInput) =>
+    `Review this ${inputs.language} diff for bugs, style, and clarity:
+${inputs.diff}
+
+Return one finding per issue.`,
+});
+
+export default code_reviewer;
+```
+
+:::
+
+[Open in playground →](/playground#a=YWdlbnQ6IGNvZGVfcmV2aWV3ZXIKbW9kZWw6IGNsYXVkZS1vcHVzLTQtNwpkZXNjcmlwdGlvbjogUmV2aWV3IGEgZGlmZiBhbmQgcmV0dXJuIHN0cnVjdHVyZWQgZmluZGluZ3MuCmlucHV0c1syXXtuYW1lLHR5cGV9OgogIGRpZmYsc3RyaW5nCiAgbGFuZ3VhZ2Usc3RyaW5nCnByb21wdDogfAogIFJldmlldyB0aGlzIHtpbnB1dHMubGFuZ3VhZ2V9IGRpZmYgZm9yIGJ1Z3MsIHN0eWxlLCBhbmQgY2xhcml0eToKICB7aW5wdXRzLmRpZmZ9CgogIFJldHVybiBvbmUgZmluZGluZyBwZXIgaXNzdWUuCm91dHB1dHNbMV17bmFtZSx0eXBlfToKICBmaW5kaW5ncywie2xpbmU6bnVtYmVyO3NldmVyaXR5Omxvd3xtZWRpdW18aGlnaDttZXNzYWdlOnN0cmluZ31bXSIK)
+
+## email-writer — enum input (tone)
+
+::: code-group
+
+```agent [email-writer.agent]
+agent: email_writer
+model: claude-opus-4-7
+description: Draft an email in a chosen tone.
+inputs[3]{name,type}:
+  recipient,string
+  topic,string
+  tone,formal|casual|friendly
+prompt: |
+  Write an email to {inputs.recipient} about {inputs.topic}.
+  Use a {inputs.tone} tone.
+outputs[2]{name,type}:
+  subject,string
+  body,string
+```
+
+```ts [email-writer.ts (generated)]
+// Generated by toac from email_writer.agent — do not edit.
+import { createAgent, type Agent } from "toad-runtime";
+import { z } from "zod";
+
+export interface EmailWriterInput {
+  recipient: string;
+  topic: string;
+  tone: "formal" | "casual" | "friendly";
+}
+
+export interface EmailWriterOutput {
+  subject: string;
+  body: string;
+}
+
+const inputSchema = z.object({
+  recipient: z.string(),
+  topic: z.string(),
+  tone: z.enum(["formal", "casual", "friendly"]),
+});
+
+const outputSchema = z.object({
+  subject: z.string(),
+  body: z.string(),
+});
+
+export const email_writer: Agent<EmailWriterInput, EmailWriterOutput> = createAgent({
+  name: "email_writer",
+  model: "claude-opus-4-7",
+  description: "Draft an email in a chosen tone.",
+  inputSchema,
+  outputSchema,
+  prompt: (inputs: EmailWriterInput) =>
+    `Write an email to ${inputs.recipient} about ${inputs.topic}.
+Use a ${inputs.tone} tone.`,
+});
+
+export default email_writer;
+```
+
+:::
+
+[Open in playground →](/playground#a=YWdlbnQ6IGVtYWlsX3dyaXRlcgptb2RlbDogY2xhdWRlLW9wdXMtNC03CmRlc2NyaXB0aW9uOiBEcmFmdCBhbiBlbWFpbCBpbiBhIGNob3NlbiB0b25lLgppbnB1dHNbM117bmFtZSx0eXBlfToKICByZWNpcGllbnQsc3RyaW5nCiAgdG9waWMsc3RyaW5nCiAgdG9uZSxmb3JtYWx8Y2FzdWFsfGZyaWVuZGx5CnByb21wdDogfAogIFdyaXRlIGFuIGVtYWlsIHRvIHtpbnB1dHMucmVjaXBpZW50fSBhYm91dCB7aW5wdXRzLnRvcGljfS4KICBVc2UgYSB7aW5wdXRzLnRvbmV9IHRvbmUuCm91dHB1dHNbMl17bmFtZSx0eXBlfToKICBzdWJqZWN0LHN0cmluZwogIGJvZHksc3RyaW5nCg)
+
+## support-agent — multiple tools + escalation
+
+::: code-group
+
+```agent [support-agent.agent]
+agent: support_agent
+model: claude-opus-4-7
+description: Answer a customer question from the knowledge base, escalating if needed.
+inputs[1]{name,type}:
+  question,string
+tools[2]: search_kb,create_ticket
+prompt: |
+  Answer the customer's question: {inputs.question}
+  Search the knowledge base first with search_kb. If you can't resolve it,
+  open a ticket with create_ticket and tell the customer.
+outputs[2]{name,type}:
+  answer,string
+  escalated,boolean
+```
+
+```ts [support-agent.ts (generated)]
+// Generated by toac from support_agent.agent — do not edit.
+import { createAgent, type Agent } from "toad-runtime";
+import { z } from "zod";
+import { search_kb, create_ticket } from "./support_agent.tools";
+
+export interface SupportAgentInput {
+  question: string;
+}
+
+export interface SupportAgentOutput {
+  answer: string;
+  escalated: boolean;
+}
+
+const inputSchema = z.object({
+  question: z.string(),
+});
+
+const outputSchema = z.object({
+  answer: z.string(),
+  escalated: z.boolean(),
+});
+
+export const support_agent: Agent<SupportAgentInput, SupportAgentOutput> = createAgent({
+  name: "support_agent",
+  model: "claude-opus-4-7",
+  description: "Answer a customer question from the knowledge base, escalating if needed.",
+  tools: { search_kb, create_ticket },
+  inputSchema,
+  outputSchema,
+  prompt: (inputs: SupportAgentInput) =>
+    `Answer the customer's question: ${inputs.question}
+Search the knowledge base first with search_kb. If you can't resolve it,
+open a ticket with create_ticket and tell the customer.`,
+});
+
+export default support_agent;
+```
+
+:::
+
+[Open in playground →](/playground#a=YWdlbnQ6IHN1cHBvcnRfYWdlbnQKbW9kZWw6IGNsYXVkZS1vcHVzLTQtNwpkZXNjcmlwdGlvbjogQW5zd2VyIGEgY3VzdG9tZXIgcXVlc3Rpb24gZnJvbSB0aGUga25vd2xlZGdlIGJhc2UsIGVzY2FsYXRpbmcgaWYgbmVlZGVkLgppbnB1dHNbMV17bmFtZSx0eXBlfToKICBxdWVzdGlvbixzdHJpbmcKdG9vbHNbMl06IHNlYXJjaF9rYixjcmVhdGVfdGlja2V0CnByb21wdDogfAogIEFuc3dlciB0aGUgY3VzdG9tZXIncyBxdWVzdGlvbjoge2lucHV0cy5xdWVzdGlvbn0KICBTZWFyY2ggdGhlIGtub3dsZWRnZSBiYXNlIGZpcnN0IHdpdGggc2VhcmNoX2tiLiBJZiB5b3UgY2FuJ3QgcmVzb2x2ZSBpdCwKICBvcGVuIGEgdGlja2V0IHdpdGggY3JlYXRlX3RpY2tldCBhbmQgdGVsbCB0aGUgY3VzdG9tZXIuCm91dHB1dHNbMl17bmFtZSx0eXBlfToKICBhbnN3ZXIsc3RyaW5nCiAgZXNjYWxhdGVkLGJvb2xlYW4K)
+
+## contact-extractor — structured extraction
+
+::: code-group
+
+```agent [contact-extractor.agent]
+agent: contact_extractor
+model: claude-opus-4-7
+description: Pull contact fields out of unstructured text.
+inputs[1]{name,type}:
+  text,string
+prompt: |
+  Extract the contact details from this text. Use an empty string for any
+  field that is not present.
+  {inputs.text}
+outputs[4]{name,type}:
+  name,string
+  email,string
+  phone,string
+  company,string
+```
+
+```ts [contact-extractor.ts (generated)]
+// Generated by toac from contact_extractor.agent — do not edit.
+import { createAgent, type Agent } from "toad-runtime";
+import { z } from "zod";
+
+export interface ContactExtractorInput {
+  text: string;
+}
+
+export interface ContactExtractorOutput {
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+}
+
+const inputSchema = z.object({
+  text: z.string(),
+});
+
+const outputSchema = z.object({
+  name: z.string(),
+  email: z.string(),
+  phone: z.string(),
+  company: z.string(),
+});
+
+export const contact_extractor: Agent<ContactExtractorInput, ContactExtractorOutput> = createAgent({
+  name: "contact_extractor",
+  model: "claude-opus-4-7",
+  description: "Pull contact fields out of unstructured text.",
+  inputSchema,
+  outputSchema,
+  prompt: (inputs: ContactExtractorInput) =>
+    `Extract the contact details from this text. Use an empty string for any
+field that is not present.
+${inputs.text}`,
+});
+
+export default contact_extractor;
+```
+
+:::
+
+[Open in playground →](/playground#a=YWdlbnQ6IGNvbnRhY3RfZXh0cmFjdG9yCm1vZGVsOiBjbGF1ZGUtb3B1cy00LTcKZGVzY3JpcHRpb246IFB1bGwgY29udGFjdCBmaWVsZHMgb3V0IG9mIHVuc3RydWN0dXJlZCB0ZXh0LgppbnB1dHNbMV17bmFtZSx0eXBlfToKICB0ZXh0LHN0cmluZwpwcm9tcHQ6IHwKICBFeHRyYWN0IHRoZSBjb250YWN0IGRldGFpbHMgZnJvbSB0aGlzIHRleHQuIFVzZSBhbiBlbXB0eSBzdHJpbmcgZm9yIGFueQogIGZpZWxkIHRoYXQgaXMgbm90IHByZXNlbnQuCiAge2lucHV0cy50ZXh0fQpvdXRwdXRzWzRde25hbWUsdHlwZX06CiAgbmFtZSxzdHJpbmcKICBlbWFpbCxzdHJpbmcKICBwaG9uZSxzdHJpbmcKICBjb21wYW55LHN0cmluZwo)
+
+## meeting-notes — several array outputs at once
+
+::: code-group
+
+```agent [meeting-notes.agent]
+agent: meeting_notes
+model: claude-opus-4-7
+description: Turn a transcript into notes, actions, and decisions.
+inputs[1]{name,type}:
+  transcript,string
+prompt: |
+  From this meeting transcript, produce a short summary, the action items,
+  and the decisions made:
+  {inputs.transcript}
+outputs[3]{name,type}:
+  summary,string
+  action_items,string[]
+  decisions,string[]
+```
+
+```ts [meeting-notes.ts (generated)]
+// Generated by toac from meeting_notes.agent — do not edit.
+import { createAgent, type Agent } from "toad-runtime";
+import { z } from "zod";
+
+export interface MeetingNotesInput {
+  transcript: string;
+}
+
+export interface MeetingNotesOutput {
+  summary: string;
+  action_items: string[];
+  decisions: string[];
+}
+
+const inputSchema = z.object({
+  transcript: z.string(),
+});
+
+const outputSchema = z.object({
+  summary: z.string(),
+  action_items: z.array(z.string()),
+  decisions: z.array(z.string()),
+});
+
+export const meeting_notes: Agent<MeetingNotesInput, MeetingNotesOutput> = createAgent({
+  name: "meeting_notes",
+  model: "claude-opus-4-7",
+  description: "Turn a transcript into notes, actions, and decisions.",
+  inputSchema,
+  outputSchema,
+  prompt: (inputs: MeetingNotesInput) =>
+    `From this meeting transcript, produce a short summary, the action items,
+and the decisions made:
+${inputs.transcript}`,
+});
+
+export default meeting_notes;
+```
+
+:::
+
+[Open in playground →](/playground#a=YWdlbnQ6IG1lZXRpbmdfbm90ZXMKbW9kZWw6IGNsYXVkZS1vcHVzLTQtNwpkZXNjcmlwdGlvbjogVHVybiBhIHRyYW5zY3JpcHQgaW50byBub3RlcywgYWN0aW9ucywgYW5kIGRlY2lzaW9ucy4KaW5wdXRzWzFde25hbWUsdHlwZX06CiAgdHJhbnNjcmlwdCxzdHJpbmcKcHJvbXB0OiB8CiAgRnJvbSB0aGlzIG1lZXRpbmcgdHJhbnNjcmlwdCwgcHJvZHVjZSBhIHNob3J0IHN1bW1hcnksIHRoZSBhY3Rpb24gaXRlbXMsCiAgYW5kIHRoZSBkZWNpc2lvbnMgbWFkZToKICB7aW5wdXRzLnRyYW5zY3JpcHR9Cm91dHB1dHNbM117bmFtZSx0eXBlfToKICBzdW1tYXJ5LHN0cmluZwogIGFjdGlvbl9pdGVtcyxzdHJpbmdbXQogIGRlY2lzaW9ucyxzdHJpbmdbXQo)
+
+## product-namer — number input + array output
+
+::: code-group
+
+```agent [product-namer.agent]
+agent: product_namer
+model: claude-opus-4-7
+description: Brainstorm product names in a given style.
+inputs[3]{name,type}:
+  description,string
+  count,number
+  style,playful|professional|techy
+prompt: |
+  Suggest {inputs.count} {inputs.style} names for this product:
+  {inputs.description}
+outputs[1]{name,type}:
+  names,string[]
+```
+
+```ts [product-namer.ts (generated)]
+// Generated by toac from product_namer.agent — do not edit.
+import { createAgent, type Agent } from "toad-runtime";
+import { z } from "zod";
+
+export interface ProductNamerInput {
+  description: string;
+  count: number;
+  style: "playful" | "professional" | "techy";
+}
+
+export interface ProductNamerOutput {
+  names: string[];
+}
+
+const inputSchema = z.object({
+  description: z.string(),
+  count: z.number(),
+  style: z.enum(["playful", "professional", "techy"]),
+});
+
+const outputSchema = z.object({
+  names: z.array(z.string()),
+});
+
+export const product_namer: Agent<ProductNamerInput, ProductNamerOutput> = createAgent({
+  name: "product_namer",
+  model: "claude-opus-4-7",
+  description: "Brainstorm product names in a given style.",
+  inputSchema,
+  outputSchema,
+  prompt: (inputs: ProductNamerInput) =>
+    `Suggest ${inputs.count} ${inputs.style} names for this product:
+${inputs.description}`,
+});
+
+export default product_namer;
+```
+
+:::
+
+[Open in playground →](/playground#a=YWdlbnQ6IHByb2R1Y3RfbmFtZXIKbW9kZWw6IGNsYXVkZS1vcHVzLTQtNwpkZXNjcmlwdGlvbjogQnJhaW5zdG9ybSBwcm9kdWN0IG5hbWVzIGluIGEgZ2l2ZW4gc3R5bGUuCmlucHV0c1szXXtuYW1lLHR5cGV9OgogIGRlc2NyaXB0aW9uLHN0cmluZwogIGNvdW50LG51bWJlcgogIHN0eWxlLHBsYXlmdWx8cHJvZmVzc2lvbmFsfHRlY2h5CnByb21wdDogfAogIFN1Z2dlc3Qge2lucHV0cy5jb3VudH0ge2lucHV0cy5zdHlsZX0gbmFtZXMgZm9yIHRoaXMgcHJvZHVjdDoKICB7aW5wdXRzLmRlc2NyaXB0aW9ufQpvdXRwdXRzWzFde25hbWUsdHlwZX06CiAgbmFtZXMsc3RyaW5nW10K)
+
+## changelog-writer — `{#each}` over commit messages
+
+::: code-group
+
+```agent [changelog-writer.agent]
+agent: changelog_writer
+model: claude-opus-4-7
+description: Turn raw commit messages into a readable changelog.
+inputs[2]{name,type}:
+  version,string
+  commits,string[]
+prompt: |
+  Write a changelog for {inputs.version}, grouping these commits by type
+  (features, fixes, docs):
+  {#each inputs.commits as c}
+  - {c}
+  {/each}
+outputs[1]{name,type}:
+  changelog,string
+```
+
+```ts [changelog-writer.ts (generated)]
+// Generated by toac from changelog_writer.agent — do not edit.
+import { createAgent, type Agent } from "toad-runtime";
+import { z } from "zod";
+
+export interface ChangelogWriterInput {
+  version: string;
+  commits: string[];
+}
+
+export interface ChangelogWriterOutput {
+  changelog: string;
+}
+
+const inputSchema = z.object({
+  version: z.string(),
+  commits: z.array(z.string()),
+});
+
+const outputSchema = z.object({
+  changelog: z.string(),
+});
+
+export const changelog_writer: Agent<ChangelogWriterInput, ChangelogWriterOutput> = createAgent({
+  name: "changelog_writer",
+  model: "claude-opus-4-7",
+  description: "Turn raw commit messages into a readable changelog.",
+  inputSchema,
+  outputSchema,
+  prompt: (inputs: ChangelogWriterInput) =>
+    `Write a changelog for ${inputs.version}, grouping these commits by type
+(features, fixes, docs):
+${inputs.commits.map((c) => `- ${c}
+`).join("")}`,
+});
+
+export default changelog_writer;
+```
+
+:::
+
+[Open in playground →](/playground#a=YWdlbnQ6IGNoYW5nZWxvZ193cml0ZXIKbW9kZWw6IGNsYXVkZS1vcHVzLTQtNwpkZXNjcmlwdGlvbjogVHVybiByYXcgY29tbWl0IG1lc3NhZ2VzIGludG8gYSByZWFkYWJsZSBjaGFuZ2Vsb2cuCmlucHV0c1syXXtuYW1lLHR5cGV9OgogIHZlcnNpb24sc3RyaW5nCiAgY29tbWl0cyxzdHJpbmdbXQpwcm9tcHQ6IHwKICBXcml0ZSBhIGNoYW5nZWxvZyBmb3Ige2lucHV0cy52ZXJzaW9ufSwgZ3JvdXBpbmcgdGhlc2UgY29tbWl0cyBieSB0eXBlCiAgKGZlYXR1cmVzLCBmaXhlcywgZG9jcyk6CiAgeyNlYWNoIGlucHV0cy5jb21taXRzIGFzIGN9CiAgLSB7Y30KICB7L2VhY2h9Cm91dHB1dHNbMV17bmFtZSx0eXBlfToKICBjaGFuZ2Vsb2csc3RyaW5nCg)
+
+## faq-bot — object-array input + `{#each}`/`{#if}`
+
+::: code-group
+
+```agent [faq-bot.agent]
+agent: faq_bot
+model: claude-opus-4-7
+description: Answer a question from a provided FAQ, optionally strict.
+inputs[3]{name,type}:
+  question,string
+  faqs,"{q:string;a:string}[]"
+  strict,boolean
+prompt: |
+  Answer the question using this FAQ:
+  {#each inputs.faqs as {q, a}}
+  Q: {q}
+  A: {a}
+  {:else}
+  (no FAQ entries provided)
+  {/each}
+  Question: {inputs.question}
+  {#if inputs.strict}
+  If none of the entries apply, reply that you don't know.
+  {:else}
+  If none apply, answer from general knowledge and say so.
+  {/if}
+outputs[2]{name,type}:
+  answer,string
+  matched,boolean
+```
+
+```ts [faq-bot.ts (generated)]
+// Generated by toac from faq_bot.agent — do not edit.
+import { createAgent, type Agent } from "toad-runtime";
+import { z } from "zod";
+
+export interface FaqBotInput {
+  question: string;
+  faqs: { q: string; a: string }[];
+  strict: boolean;
+}
+
+export interface FaqBotOutput {
+  answer: string;
+  matched: boolean;
+}
+
+const inputSchema = z.object({
+  question: z.string(),
+  faqs: z.array(z.object({ q: z.string(), a: z.string() })),
+  strict: z.boolean(),
+});
+
+const outputSchema = z.object({
+  answer: z.string(),
+  matched: z.boolean(),
+});
+
+export const faq_bot: Agent<FaqBotInput, FaqBotOutput> = createAgent({
+  name: "faq_bot",
+  model: "claude-opus-4-7",
+  description: "Answer a question from a provided FAQ, optionally strict.",
+  inputSchema,
+  outputSchema,
+  prompt: (inputs: FaqBotInput) =>
+    `Answer the question using this FAQ:
+${inputs.faqs.length > 0 ? inputs.faqs.map(({ q, a }) => `Q: ${q}
+A: ${a}
+`).join("") : `(no FAQ entries provided)
+`}Question: ${inputs.question}
+${inputs.strict ? `If none of the entries apply, reply that you don't know.
+` : `If none apply, answer from general knowledge and say so.
+`}`,
+});
+
+export default faq_bot;
+```
+
+:::
+
+[Open in playground →](/playground#a=YWdlbnQ6IGZhcV9ib3QKbW9kZWw6IGNsYXVkZS1vcHVzLTQtNwpkZXNjcmlwdGlvbjogQW5zd2VyIGEgcXVlc3Rpb24gZnJvbSBhIHByb3ZpZGVkIEZBUSwgb3B0aW9uYWxseSBzdHJpY3QuCmlucHV0c1szXXtuYW1lLHR5cGV9OgogIHF1ZXN0aW9uLHN0cmluZwogIGZhcXMsIntxOnN0cmluZzthOnN0cmluZ31bXSIKICBzdHJpY3QsYm9vbGVhbgpwcm9tcHQ6IHwKICBBbnN3ZXIgdGhlIHF1ZXN0aW9uIHVzaW5nIHRoaXMgRkFROgogIHsjZWFjaCBpbnB1dHMuZmFxcyBhcyB7cSwgYX19CiAgUToge3F9CiAgQToge2F9CiAgezplbHNlfQogIChubyBGQVEgZW50cmllcyBwcm92aWRlZCkKICB7L2VhY2h9CiAgUXVlc3Rpb246IHtpbnB1dHMucXVlc3Rpb259CiAgeyNpZiBpbnB1dHMuc3RyaWN0fQogIElmIG5vbmUgb2YgdGhlIGVudHJpZXMgYXBwbHksIHJlcGx5IHRoYXQgeW91IGRvbid0IGtub3cuCiAgezplbHNlfQogIElmIG5vbmUgYXBwbHksIGFuc3dlciBmcm9tIGdlbmVyYWwga25vd2xlZGdlIGFuZCBzYXkgc28uCiAgey9pZn0Kb3V0cHV0c1syXXtuYW1lLHR5cGV9OgogIGFuc3dlcixzdHJpbmcKICBtYXRjaGVkLGJvb2xlYW4K)
+
+## persona-bot — a `system:` prompt block
+
+::: code-group
+
+```agent [persona-bot.agent]
+agent: persona_bot
+model: claude-opus-4-7
+description: Answer as a specific persona.
+system: |
+  You are a terse senior engineer. Prefer concrete examples over theory and
+  never use more words than necessary.
+inputs[1]{name,type}:
+  question,string
+prompt: |
+  {inputs.question}
+outputs[1]{name,type}:
+  answer,string
+```
+
+```ts [persona-bot.ts (generated)]
+// Generated by toac from persona_bot.agent — do not edit.
+import { createAgent, type Agent } from "toad-runtime";
+import { z } from "zod";
+
+export interface PersonaBotInput {
+  question: string;
+}
+
+export interface PersonaBotOutput {
+  answer: string;
+}
+
+const inputSchema = z.object({
+  question: z.string(),
+});
+
+const outputSchema = z.object({
+  answer: z.string(),
+});
+
+export const persona_bot: Agent<PersonaBotInput, PersonaBotOutput> = createAgent({
+  name: "persona_bot",
+  model: "claude-opus-4-7",
+  description: "Answer as a specific persona.",
+  inputSchema,
+  outputSchema,
+  system: (inputs: PersonaBotInput) =>
+    `You are a terse senior engineer. Prefer concrete examples over theory and
+never use more words than necessary.`,
+  prompt: (inputs: PersonaBotInput) =>
+    `${inputs.question}`,
+});
+
+export default persona_bot;
+```
+
+:::
+
+[Open in playground →](/playground#a=YWdlbnQ6IHBlcnNvbmFfYm90Cm1vZGVsOiBjbGF1ZGUtb3B1cy00LTcKZGVzY3JpcHRpb246IEFuc3dlciBhcyBhIHNwZWNpZmljIHBlcnNvbmEuCnN5c3RlbTogfAogIFlvdSBhcmUgYSB0ZXJzZSBzZW5pb3IgZW5naW5lZXIuIFByZWZlciBjb25jcmV0ZSBleGFtcGxlcyBvdmVyIHRoZW9yeSBhbmQKICBuZXZlciB1c2UgbW9yZSB3b3JkcyB0aGFuIG5lY2Vzc2FyeS4KaW5wdXRzWzFde25hbWUsdHlwZX06CiAgcXVlc3Rpb24sc3RyaW5nCnByb21wdDogfAogIHtpbnB1dHMucXVlc3Rpb259Cm91dHB1dHNbMV17bmFtZSx0eXBlfToKICBhbnN3ZXIsc3RyaW5nCg)
+
+## research-director — `uses:` composition (multi-agent)
+
+::: code-group
+
+```agent [research-director.agent]
+agent: research_director
+model: claude-opus-4-7
+description: Research a topic, then condense it for an executive.
+inputs[1]{name,type}:
+  topic,string
+uses[2]: researcher,summarizer
+prompt: |
+  Research {inputs.topic} with the researcher sub-agent, then run the result
+  through the summarizer to produce an executive-ready brief.
+outputs[1]{name,type}:
+  brief,string
+```
+
+```ts [research-director.ts (generated)]
+// Generated by toac from research_director.agent — do not edit.
+import { createAgent, type Agent } from "toad-runtime";
+import { z } from "zod";
+import { researcher } from "./researcher";
+import { summarizer } from "./summarizer";
+
+export interface ResearchDirectorInput {
+  topic: string;
+}
+
+export interface ResearchDirectorOutput {
+  brief: string;
+}
+
+const inputSchema = z.object({
+  topic: z.string(),
+});
+
+const outputSchema = z.object({
+  brief: z.string(),
+});
+
+export const research_director: Agent<ResearchDirectorInput, ResearchDirectorOutput> = createAgent({
+  name: "research_director",
+  model: "claude-opus-4-7",
+  description: "Research a topic, then condense it for an executive.",
+  tools: { researcher: researcher.asTool(), summarizer: summarizer.asTool() },
+  inputSchema,
+  outputSchema,
+  prompt: (inputs: ResearchDirectorInput) =>
+    `Research ${inputs.topic} with the researcher sub-agent, then run the result
+through the summarizer to produce an executive-ready brief.`,
+});
+
+export default research_director;
+```
+
+:::
+
+[Open in playground →](/playground#a=YWdlbnQ6IHJlc2VhcmNoX2RpcmVjdG9yCm1vZGVsOiBjbGF1ZGUtb3B1cy00LTcKZGVzY3JpcHRpb246IFJlc2VhcmNoIGEgdG9waWMsIHRoZW4gY29uZGVuc2UgaXQgZm9yIGFuIGV4ZWN1dGl2ZS4KaW5wdXRzWzFde25hbWUsdHlwZX06CiAgdG9waWMsc3RyaW5nCnVzZXNbMl06IHJlc2VhcmNoZXIsc3VtbWFyaXplcgpwcm9tcHQ6IHwKICBSZXNlYXJjaCB7aW5wdXRzLnRvcGljfSB3aXRoIHRoZSByZXNlYXJjaGVyIHN1Yi1hZ2VudCwgdGhlbiBydW4gdGhlIHJlc3VsdAogIHRocm91Z2ggdGhlIHN1bW1hcml6ZXIgdG8gcHJvZHVjZSBhbiBleGVjdXRpdmUtcmVhZHkgYnJpZWYuCm91dHB1dHNbMV17bmFtZSx0eXBlfToKICBicmllZixzdHJpbmcK)
 
 ---
 

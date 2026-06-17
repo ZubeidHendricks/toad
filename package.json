@@ -15,6 +15,7 @@
     "format": "prettier --write .",
     "bench": "node scripts/bench-tool-loop.mjs",
     "smoke:lsp": "node scripts/smoke-lsp.mjs",
+    "gen:examples": "node scripts/gen-examples.mjs",
     "build:site": "esbuild packages/compiler/dist/index.js --bundle --format=esm --outfile=site/public/toad-compiler.js && esbuild scripts/tokenizer-entry.mjs --bundle --format=esm --outfile=site/public/toad-tokenizer.js && node scripts/gen-llms.mjs",
     "site:dev": "pnpm build:site && vitepress dev site",
     "site:build": "pnpm build:site && vitepress build site",
