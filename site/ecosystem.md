@@ -50,7 +50,7 @@ Until it's on the marketplace, install from source:
 ```bash
 cd editors/vscode
 npx @vscode/vsce package
-code --install-extension toad-agent-0.1.0.vsix
+code --install-extension toad-agent-0.5.0.vsix
 ```
 
 The same TextMate grammar powers the code blocks on this site.

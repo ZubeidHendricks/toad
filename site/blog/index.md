@@ -2,6 +2,23 @@
 
 What's new in TOAD. Follow along on [GitHub releases](https://github.com/ZubeidHendricks/toad/releases).
 
+## TOAD 0.6.0 — diagnostics in every editor {#v0-6-0}
+
+_June 17, 2026_
+
+TOAD's compiler already gave you located, rustc-style diagnostics from `toac check` and live red squiggles in VS Code. This release takes them everywhere else:
+
+- **`toac lsp`** — a standalone [Language Server](https://microsoft.github.io/language-server-protocol/) over stdio. The same diagnostics, hovers, completions, and `toac fmt` formatting in **Neovim, Helix, Zed, Emacs, JetBrains** — anything that speaks LSP. It runs the **real compiler** front-end, so there is no second implementation to drift from `toac`. Per-editor setup is in the [ecosystem guide](/ecosystem#editor-support).
+- **One source of truth** — hover and completion now live in the compiler as editor-agnostic services that both the LSP and the VS Code extension consume, so every editor shows the same thing.
+- **No new dependencies** — the LSP wire protocol is hand-rolled, keeping `toad-compiler` lean and the browser playground bundle untouched.
+
+```bash
+npm i -g toad-compiler@0.6.0
+# then point your editor at: toac lsp
+```
+
+A standard needs tooling everywhere code is written. This is that pillar.
+
 ## TOAD 0.2.0 — the standard takes shape {#v0-2-0}
 
 _June 12, 2026_
