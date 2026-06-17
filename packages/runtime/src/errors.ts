@@ -29,3 +29,18 @@ export class OutputParseError extends Error {
     this.name = "OutputParseError";
   }
 }
+
+/**
+ * A tool call was refused by `authorizeToolCall`. Throw this from the hook (or
+ * let it be thrown) to abort the whole run; returning `false` instead denies
+ * just the one call and lets the model continue. See the delegation proposal.
+ */
+export class AuthorizationError extends Error {
+  constructor(
+    readonly tool: string,
+    message?: string,
+  ) {
+    super(message ?? `authorization denied for tool "${tool}"`);
+    this.name = "AuthorizationError";
+  }
+}

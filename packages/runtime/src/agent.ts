@@ -13,6 +13,12 @@ import {
 } from "./client.js";
 import { MaxTurnsError, OutputParseError, ToolError } from "./errors.js";
 import type { AnyToolDef, ToolDef, ToolRunContext } from "./tool.js";
+import {
+  extendChain,
+  type DelegationContext,
+  type Principal,
+  type ToolCallRequest,
+} from "./delegation.js";
 
 const RESPOND_TOOL = "respond";
 
@@ -64,6 +70,15 @@ export interface ContextBreakdown {
 
 export interface AgentHooks {
   onToolCall?: (name: string, input: unknown) => void;
+  /**
+   * Authorize a tool call against the delegation chain *before* the tool runs —
+   * the confused-deputy guard. Return (or resolve to) `false` to deny just this
+   * call (the model gets an error result and continues); throw an
+   * `AuthorizationError` to abort the whole run. Absent ⇒ every call is allowed
+   * (the feature is opt-in). When both the agent's hooks and a per-call hook
+   * define this, *both* must allow. See the delegation proposal.
+   */
+  authorizeToolCall?: (req: ToolCallRequest) => boolean | Promise<boolean>;
   onToolResult?: (name: string, output: unknown) => void;
   onError?: (error: unknown) => void;
   /**
@@ -143,6 +158,13 @@ export interface RunOptions {
    * run, e.g. rolling a sub-agent's usage up into a parent (see `asTool`).
    */
   hooks?: AgentHooks;
+  /**
+   * Seed the delegation chain for this run — the originating user (`subject`)
+   * and the actors so far. It propagates into every tool call (`ToolRunContext`)
+   * and extends by one hop through each `asTool` sub-agent, so
+   * `authorizeToolCall` can decide against the full chain. Omitted ⇒ no chain.
+   */
+  delegation?: DelegationContext;
 }
 
 /**
@@ -290,6 +312,7 @@ export function createAgent<I, O = string>(
     const send = async (message?: string, options?: RunOptions): Promise<O> => {
       const signal = options?.signal;
       const hooks = mergeHooks(config.hooks, options?.hooks);
+      const delegation = options?.delegation;
       let userText: string;
       if (!started) {
         started = true;
@@ -391,6 +414,7 @@ export function createAgent<I, O = string>(
           config,
           signal,
           hooks,
+          delegation,
         );
         for (const e of execs) if (e.ephemeral) ephemeralIds.add(e.id);
         messages.push({ role: "user", content: execs.map((e) => e.content) });
@@ -496,6 +520,7 @@ export function createAgent<I, O = string>(
       const client = config.client ?? anthropicClient();
       const signal = options?.signal;
       const hooks = mergeHooks(config.hooks, options?.hooks);
+      const delegation = options?.delegation;
       async function* generate(): AsyncGenerator<AgentEvent<O>> {
         if (client.stream === undefined) {
           throw new Error(
@@ -638,6 +663,7 @@ export function createAgent<I, O = string>(
             config,
             signal,
             hooks,
+            delegation,
           );
           for (const e of execs) {
             if (e.ephemeral) ephemeralIds.add(e.id);
@@ -664,10 +690,15 @@ export function createAgent<I, O = string>(
           `Run the ${config.name} agent.`,
         input,
         run: (value: I, ctx?: ToolRunContext) => {
-          // Forward the parent's cancellation, and optionally surface this
-          // sub-agent's usage so a composition tree's cost can be aggregated.
+          // Forward the parent's cancellation, extend the delegation chain by
+          // this sub-agent (so its own tool calls authorize against the full
+          // chain), and optionally surface usage for composition-tree costing.
           const runOptions: RunOptions = {};
           if (ctx?.signal !== undefined) runOptions.signal = ctx.signal;
+          if (ctx?.delegation !== undefined) {
+            const self: Principal = { id: `agent:${config.name}` };
+            runOptions.delegation = extendChain(ctx.delegation, self);
+          }
           if (options?.onUsage !== undefined) {
             runOptions.hooks = { onUsage: options.onUsage };
           }
@@ -696,8 +727,12 @@ async function runTool(
   name: string,
   timeoutMs: number | undefined,
   signal: AbortSignal | undefined,
+  delegation: DelegationContext | undefined,
 ): Promise<unknown> {
-  const exec = Promise.resolve(def.run(input, signal ? { signal } : {}));
+  const ctx: ToolRunContext = {};
+  if (signal !== undefined) ctx.signal = signal;
+  if (delegation !== undefined) ctx.delegation = delegation;
+  const exec = Promise.resolve(def.run(input, ctx));
   if (timeoutMs === undefined) {
     return exec;
   }
@@ -743,6 +778,7 @@ async function runToolUses<I, O>(
   config: AgentConfig<I, O>,
   signal: AbortSignal | undefined,
   hooks: AgentHooks | undefined,
+  delegation: DelegationContext | undefined,
 ): Promise<ToolExecution[]> {
   return Promise.all(
     toolUses.map(async (tu): Promise<ToolExecution> => {
@@ -771,6 +807,30 @@ async function runToolUses<I, O>(
         };
       }
       hooks?.onToolCall?.(tu.name, input.data);
+      // Authorize against the full delegation chain before the tool runs. A
+      // `false` return denies just this call (the model sees an error result
+      // and continues); a thrown AuthorizationError aborts the whole run.
+      if (hooks?.authorizeToolCall !== undefined) {
+        const allowed = await hooks.authorizeToolCall({
+          tool: tu.name,
+          input: input.data,
+          delegation,
+          agent: config.name,
+        });
+        if (!allowed) {
+          return {
+            id: tu.id,
+            name: tu.name,
+            output: undefined,
+            content: toolResult(
+              tu.id,
+              `authorization denied: "${tu.name}" is not permitted for this delegation chain`,
+              true,
+            ),
+            ephemeral: false,
+          };
+        }
+      }
       let output: unknown;
       try {
         output = await runTool(
@@ -779,6 +839,7 @@ async function runToolUses<I, O>(
           tu.name,
           def.timeoutMs ?? config.toolTimeoutMs,
           signal,
+          delegation,
         );
       } catch (err) {
         hooks?.onError?.(err);
@@ -946,6 +1007,10 @@ function mergeHooks(
   if (extra === undefined) return base;
   return {
     onToolCall: chain(base.onToolCall, extra.onToolCall),
+    authorizeToolCall: mergeAuthorize(
+      base.authorizeToolCall,
+      extra.authorizeToolCall,
+    ),
     onToolResult: chain(base.onToolResult, extra.onToolResult),
     onError: chain(base.onError, extra.onError),
     onUsage: chain(base.onUsage, extra.onUsage),
@@ -955,6 +1020,20 @@ function mergeHooks(
       extra.onToolResultEncoded,
     ),
   };
+}
+
+/**
+ * Combine two authorization hooks with AND semantics: a call is allowed only if
+ * both permit it (config first; if it denies, the per-call hook isn't asked).
+ * Returns whichever is defined when only one is.
+ */
+function mergeAuthorize(
+  base: AgentHooks["authorizeToolCall"],
+  extra: AgentHooks["authorizeToolCall"],
+): AgentHooks["authorizeToolCall"] {
+  if (base === undefined) return extra;
+  if (extra === undefined) return base;
+  return async (req) => (await base(req)) && (await extra(req));
 }
 
 /**

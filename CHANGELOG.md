@@ -3,6 +3,21 @@
 All notable changes to `toad-compiler` and `toad-runtime`. The `.agent` format
 is versioned separately in [`SPEC.md`](./SPEC.md).
 
+## Unreleased
+
+- **Delegation chains & tool authorization** (`toad-runtime`) — a
+  framework-level defense against the multi-agent _confused deputy_. Seed a
+  `RunOptions.delegation` (the originating user + the acting agents); it
+  propagates into every tool via `ToolRunContext.delegation` and extends by one
+  hop through each `asTool` sub-agent. A new deny-capable `authorizeToolCall`
+  hook sees the full chain and can block a call before it runs (`false` denies
+  one call; throwing `AuthorizationError` aborts the run), so a sub-agent can be
+  barred from a resource _regardless_ of a token it inherited through the
+  context. Fully opt-in and backward compatible. New exports:
+  `DelegationContext`, `Principal`, `ToolCallRequest`, `extendChain`,
+  `AuthorizationError`. Design & roadmap:
+  [`docs/proposals/delegation-and-tool-authz.md`](./docs/proposals/delegation-and-tool-authz.md).
+
 ## 0.6.0
 
 The editor-everywhere release: the diagnostics `toac check` produces now reach
